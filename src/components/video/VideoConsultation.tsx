@@ -49,7 +49,8 @@ export function VideoConsultation() {
   const isProUser = false; // This should come from subscription data
   const maxSessionTime = isProUser ? 3600 : 300; // 60 minutes for pro, 5 minutes for free
   const timeRemaining = Math.max(0, maxSessionTime - sessionDuration);
-  const FREE_SESSION_KEY = 'lastFreeVideoSession';
+  // Free session key should be user-specific
+  const FREE_SESSION_KEY = user ? `lastFreeVideoSession_${user.id}` : 'lastFreeVideoSession';
 
   // Default replica ID - this should be configured based on personality
   const getReplicaId = (personality: string) => {
