@@ -66,15 +66,15 @@ export function useStripe() {
           .from('subscriptions')
           .select('*')
           .eq('user_id', user.id)
-          .single();
+          .limit(1);
 
-        if (error && error.code !== 'PGRST116') {
+        if (error) {
           const isJWTError = await handleSupabaseError(error);
           if (!isJWTError) throw error;
           return null;
         }
 
-        return data;
+        return data && data.length > 0 ? data[0] : null;
       });
 
       setCurrentSubscription(data);
