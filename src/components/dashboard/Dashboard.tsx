@@ -17,6 +17,9 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useStripe } from '../../hooks/useStripe';
+import { SubscriptionBanner } from '../subscription/SubscriptionBanner';
+import { SubscriptionModal } from '../subscription/SubscriptionModal';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -25,6 +28,7 @@ import toast from 'react-hot-toast';
 export function Dashboard() {
   const { user, handleSupabaseError } = useAuth();
   const { isOnline, isConnectedToSupabase, withRetry } = useNetworkStatus();
+  const { isProUser, loadCurrentSubscription } = useStripe();
   const navigate = useNavigate();
   const { 
     scheduleMoodReminder, 
@@ -40,6 +44,12 @@ export function Dashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+
+  // Load subscription status
+  useEffect(() => {
+    loadCurrentSubscription();
+  }, [loadCurrentSubscription]);
 
   const loadStats = useCallback(async () => {
     if (!user) return;
@@ -253,6 +263,11 @@ export function Dashboard() {
         </p>
       </motion.div>
 
+      {/* Subscription Banner for Free Users */}
+      {!isProUser() && !error && (
+        <SubscriptionBanner onUpgrade={() => setShowSubscriptionModal(true)} />
+      )}
+
       {/* Connection Error Banner */}
       {error && (
         <motion.div
@@ -438,6 +453,13 @@ export function Dashboard() {
           <ExternalLink className="h-3 w-3" />
         </a>
       </motion.div>
+
+      {/* Subscription Modal */}
+      <SubscriptionModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        selectedPlan="pro"
+      />
     </div>
   );
 }

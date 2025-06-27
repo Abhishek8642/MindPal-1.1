@@ -9,23 +9,34 @@ import {
   Save,
   Mail,
   Phone,
-  Globe
+  Globe,
+  CreditCard,
+  ExternalLink
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useSettings } from '../../hooks/useSettings';
+import { useStripe } from '../../hooks/useStripe';
+import { SubscriptionModal } from '../subscription/SubscriptionModal';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 
 export function Settings() {
   const { user } = useAuth();
   const { settings, updateSettings, loading } = useSettings();
+  const { currentSubscription, isProUser, createPortalSession, loadCurrentSubscription } = useStripe();
   const [activeTab, setActiveTab] = React.useState('profile');
+  const [showSubscriptionModal, setShowSubscriptionModal] = React.useState(false);
   const [profile, setProfile] = React.useState({
     fullName: '',
     phone: '',
     timezone: 'UTC',
   });
   const [profileLoading, setProfileLoading] = React.useState(false);
+
+  // Load subscription data on component mount
+  React.useEffect(() => {
+    loadCurrentSubscription();
+  }, [loadCurrentSubscription]);
 
   // Load profile data on component mount
   React.useEffect(() => {
@@ -121,6 +132,20 @@ export function Settings() {
     }
   };
 
+  const handleManageBilling = async () => {
+    await createPortalSession();
+  };
+
+  const formatSubscriptionStatus = () => {
+    if (!currentSubscription) return 'Free Plan';
+    
+    if (currentSubscription.is_active) {
+      return `${currentSubscription.plan_type.charAt(0).toUpperCase() + currentSubscription.plan_type.slice(1)} Plan`;
+    }
+    
+    return 'Expired';
+  };
+
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -173,7 +198,7 @@ export function Settings() {
                   value={profile.phone}
                   onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                   className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="+1 (555) 123-4567"
+                  placeholder="+91 98765 43210"
                 />
               </div>
             </div>
@@ -190,6 +215,7 @@ export function Settings() {
                   className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
                   <option value="UTC">UTC</option>
+                  <option value="Asia/Kolkata">India Standard Time</option>
                   <option value="America/New_York">Eastern Time</option>
                   <option value="America/Chicago">Central Time</option>
                   <option value="America/Denver">Mountain Time</option>
@@ -310,6 +336,7 @@ export function Settings() {
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="en">English</option>
+                <option value="hi">Hindi</option>
                 <option value="es">Spanish</option>
                 <option value="fr">French</option>
                 <option value="de">German</option>
@@ -317,100 +344,9 @@ export function Settings() {
                 <option value="pt">Portuguese</option>
                 <option value="ru">Russian</option>
                 <option value="zh">Chinese (Simplified)</option>
-                <option value="zh-TW">Chinese (Traditional)</option>
                 <option value="ja">Japanese</option>
                 <option value="ko">Korean</option>
                 <option value="ar">Arabic</option>
-                <option value="hi">Hindi</option>
-                <option value="bn">Bengali</option>
-                <option value="pa">Punjabi</option>
-                <option value="jv">Javanese</option>
-                <option value="ms">Malay</option>
-                <option value="vi">Vietnamese</option>
-                <option value="th">Thai</option>
-                <option value="tr">Turkish</option>
-                <option value="fa">Persian</option>
-                <option value="pl">Polish</option>
-                <option value="uk">Ukrainian</option>
-                <option value="ro">Romanian</option>
-                <option value="nl">Dutch</option>
-                <option value="el">Greek</option>
-                <option value="hu">Hungarian</option>
-                <option value="cs">Czech</option>
-                <option value="sv">Swedish</option>
-                <option value="fi">Finnish</option>
-                <option value="no">Norwegian</option>
-                <option value="da">Danish</option>
-                <option value="he">Hebrew</option>
-                <option value="id">Indonesian</option>
-                <option value="tl">Tagalog</option>
-                <option value="sr">Serbian</option>
-                <option value="hr">Croatian</option>
-                <option value="sk">Slovak</option>
-                <option value="bg">Bulgarian</option>
-                <option value="lt">Lithuanian</option>
-                <option value="lv">Latvian</option>
-                <option value="et">Estonian</option>
-                <option value="sl">Slovenian</option>
-                <option value="mt">Maltese</option>
-                <option value="ga">Irish</option>
-                <option value="is">Icelandic</option>
-                <option value="sq">Albanian</option>
-                <option value="mk">Macedonian</option>
-                <option value="af">Afrikaans</option>
-                <option value="sw">Swahili</option>
-                <option value="zu">Zulu</option>
-                <option value="xh">Xhosa</option>
-                <option value="st">Southern Sotho</option>
-                <option value="tn">Tswana</option>
-                <option value="ss">Swati</option>
-                <option value="ts">Tsonga</option>
-                <option value="ve">Venda</option>
-                <option value="nr">Ndebele</option>
-                <option value="yo">Yoruba</option>
-                <option value="ig">Igbo</option>
-                <option value="ha">Hausa</option>
-                <option value="am">Amharic</option>
-                <option value="om">Oromo</option>
-                <option value="so">Somali</option>
-                <option value="rw">Kinyarwanda</option>
-                <option value="ny">Chichewa</option>
-                <option value="mg">Malagasy</option>
-                <option value="sn">Shona</option>
-                <option value="ti">Tigrinya</option>
-                <option value="km">Khmer</option>
-                <option value="lo">Lao</option>
-                <option value="my">Burmese</option>
-                <option value="si">Sinhala</option>
-                <option value="ne">Nepali</option>
-                <option value="ur">Urdu</option>
-                <option value="ps">Pashto</option>
-                <option value="sd">Sindhi</option>
-                <option value="gu">Gujarati</option>
-                <option value="or">Odia</option>
-                <option value="ta">Tamil</option>
-                <option value="te">Telugu</option>
-                <option value="kn">Kannada</option>
-                <option value="ml">Malayalam</option>
-                <option value="as">Assamese</option>
-                <option value="mr">Marathi</option>
-                <option value="sa">Sanskrit</option>
-                <option value="bn">Bengali</option>
-                <option value="bo">Tibetan</option>
-                <option value="dz">Dzongkha</option>
-                <option value="mn">Mongolian</option>
-                <option value="kk">Kazakh</option>
-                <option value="ky">Kyrgyz</option>
-                <option value="uz">Uzbek</option>
-                <option value="tk">Turkmen</option>
-                <option value="tg">Tajik</option>
-                <option value="az">Azerbaijani</option>
-                <option value="ka">Georgian</option>
-                <option value="hy">Armenian</option>
-                <option value="be">Belarusian</option>
-                <option value="mo">Moldovan</option>
-                <option value="uk">Ukrainian</option>
-                <option value="bs">Bosnian</option>
               </select>
             </div>
 
@@ -521,41 +457,107 @@ export function Settings() {
         return (
           <div className="space-y-6">
             <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl p-6 border border-purple-100 dark:border-purple-800">
-              <div className="flex items-center space-x-3 mb-4">
-                <Crown className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">MindPal Pro</h3>
-              </div>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                Currently on the free plan. Upgrade to Pro for advanced features!
-              </p>
-              
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center space-x-2 text-sm">
-                  <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                  <span className="text-gray-700 dark:text-gray-300">Advanced AI personality customization</span>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <Crown className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                      {formatSubscriptionStatus()}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      {isProUser() ? 'You have access to all premium features' : 'Upgrade to unlock premium features'}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2 text-sm">
-                  <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                  <span className="text-gray-700 dark:text-gray-300">Extended mood analytics and insights</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm">
-                  <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                  <span className="text-gray-700 dark:text-gray-300">Priority support and early access to features</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm">
-                  <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                  <span className="text-gray-700 dark:text-gray-300">Family sharing and parental reports</span>
-                </div>
+                
+                {isProUser() && (
+                  <div className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-3 py-1 rounded-full text-sm font-medium">
+                    Active
+                  </div>
+                )}
               </div>
 
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
-              >
-                Upgrade to Pro - $9.99/month
-              </motion.button>
+              {!isProUser() && (
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center space-x-2 text-sm">
+                    <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                    <span className="text-gray-700 dark:text-gray-300">Unlimited video sessions (60 minutes each)</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm">
+                    <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                    <span className="text-gray-700 dark:text-gray-300">Advanced mood analytics and insights</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm">
+                    <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                    <span className="text-gray-700 dark:text-gray-300">Priority support and early access to features</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm">
+                    <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                    <span className="text-gray-700 dark:text-gray-300">Export your data and reports</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex space-x-3">
+                {!isProUser() ? (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowSubscriptionModal(true)}
+                    className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2"
+                  >
+                    <Crown className="h-4 w-4" />
+                    <span>Upgrade to Pro - ₹199/month</span>
+                  </motion.button>
+                ) : (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleManageBilling}
+                    className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-3 px-6 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 flex items-center justify-center space-x-2"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    <span>Manage Billing</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </motion.button>
+                )}
+              </div>
             </div>
+
+            {/* Billing Information */}
+            {currentSubscription && (
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Billing Information</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Plan:</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {currentSubscription.plan_type.charAt(0).toUpperCase() + currentSubscription.plan_type.slice(1)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Status:</span>
+                    <span className={`font-medium ${
+                      currentSubscription.is_active 
+                        ? 'text-green-600 dark:text-green-400' 
+                        : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      {currentSubscription.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  {currentSubscription.expires_at && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        {currentSubscription.is_active ? 'Next billing:' : 'Expired:'}
+                      </span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {new Date(currentSubscription.expires_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         );
 
@@ -635,6 +637,13 @@ export function Settings() {
           </div>
         </div>
       </div>
+
+      {/* Subscription Modal */}
+      <SubscriptionModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        selectedPlan="pro"
+      />
     </div>
   );
 }
