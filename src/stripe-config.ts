@@ -8,17 +8,15 @@ export interface StripeProduct {
   mode: 'payment' | 'subscription';
 }
 
-// NOTE: The product ID 'prod_SZo2DUxaaXJyE6' could not be found on Stripe
-// Using a placeholder configuration for demo purposes
-// You need to create this product in your Stripe dashboard first
+// Updated with your actual Stripe Price ID
 export const STRIPE_PRODUCTS: StripeProduct[] = [
   {
-    id: 'prod_demo_mindpal_pro',
+    id: 'prod_SaEOlOgANKu2QM',
     name: 'MindPal Pro',
     description: 'Advanced AI personality customization, Extended mood analytics and insights, Priority support and early access to features, Family sharing and parental reports',
-    priceId: 'price_demo_199_inr_monthly',
-    price: 199.00,
-    currency: 'INR',
+    priceId: 'price_1Rf3vbP9u4ZhsDFE4NWkQWdQ',
+    price: 1.00, // Updated to match your test amount
+    currency: 'USD', // Updated to USD (Stripe's default for test mode)
     mode: 'subscription'
   }
 ];
