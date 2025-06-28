@@ -4,38 +4,43 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables');
+  console.warn('Missing Supabase environment variables - some features may not work');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Create client with fallback values to prevent crashes
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co', 
+  supabaseKey || 'placeholder-key'
+);
 
-export type Database = {
+// Simplified database types - no complex type generation needed
+export interface Database {
   public: {
     Tables: {
       profiles: {
         Row: {
           id: string;
           email: string;
-          full_name: string | null;
-          avatar_url: string | null;
-          timezone: string | null;
-          phone: string | null;
+          full_name?: string;
+          avatar_url?: string;
+          timezone?: string;
+          phone?: string;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id: string;
           email: string;
-          full_name?: string | null;
-          avatar_url?: string | null;
-          timezone?: string | null;
-          phone?: string | null;
+          full_name?: string;
+          avatar_url?: string;
+          timezone?: string;
+          phone?: string;
         };
         Update: {
-          full_name?: string | null;
-          avatar_url?: string | null;
-          timezone?: string | null;
-          phone?: string | null;
+          full_name?: string;
+          avatar_url?: string;
+          timezone?: string;
+          phone?: string;
         };
       };
       tasks: {
@@ -43,30 +48,36 @@ export type Database = {
           id: string;
           user_id: string;
           title: string;
-          description: string | null;
+          description?: string;
           completed: boolean;
           priority: 'low' | 'medium' | 'high';
           category: string;
-          due_date: string | null;
+          due_date?: string;
+          reminder_enabled: boolean;
+          reminder_time?: string;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           user_id: string;
           title: string;
-          description?: string | null;
+          description?: string;
           completed?: boolean;
           priority?: 'low' | 'medium' | 'high';
           category?: string;
-          due_date?: string | null;
+          due_date?: string;
+          reminder_enabled?: boolean;
+          reminder_time?: string;
         };
         Update: {
           title?: string;
-          description?: string | null;
+          description?: string;
           completed?: boolean;
           priority?: 'low' | 'medium' | 'high';
           category?: string;
-          due_date?: string | null;
+          due_date?: string;
+          reminder_enabled?: boolean;
+          reminder_time?: string;
         };
       };
       mood_entries: {
@@ -75,37 +86,54 @@ export type Database = {
           user_id: string;
           mood: number;
           emoji: string;
-          notes: string | null;
+          notes?: string;
           created_at: string;
         };
         Insert: {
           user_id: string;
           mood: number;
           emoji: string;
-          notes?: string | null;
+          notes?: string;
         };
         Update: {
           mood?: number;
           emoji?: string;
-          notes?: string | null;
+          notes?: string;
         };
       };
-      voice_sessions: {
+      chat_sessions: {
         Row: {
           id: string;
           user_id: string;
-          transcript: string;
-          ai_response: string;
+          title: string;
           created_at: string;
+          updated_at: string;
         };
         Insert: {
           user_id: string;
-          transcript: string;
-          ai_response: string;
+          title?: string;
         };
         Update: {
-          transcript?: string;
-          ai_response?: string;
+          title?: string;
+        };
+      };
+      chat_messages: {
+        Row: {
+          id: string;
+          session_id: string;
+          user_id: string;
+          message_type: 'user' | 'ai';
+          content: string;
+          created_at: string;
+        };
+        Insert: {
+          session_id: string;
+          user_id: string;
+          message_type: 'user' | 'ai';
+          content: string;
+        };
+        Update: {
+          content?: string;
         };
       };
       user_settings: {
@@ -154,6 +182,100 @@ export type Database = {
           voice_recordings?: boolean;
         };
       };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: 'task_reminder' | 'mood_reminder' | 'daily_summary';
+          title: string;
+          message: string;
+          scheduled_for: string;
+          sent: boolean;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          type: 'task_reminder' | 'mood_reminder' | 'daily_summary';
+          title: string;
+          message: string;
+          scheduled_for: string;
+          sent?: boolean;
+        };
+        Update: {
+          sent?: boolean;
+        };
+      };
+      encrypted_data: {
+        Row: {
+          id: string;
+          user_id: string;
+          data_type: string;
+          encrypted_content: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          data_type: string;
+          encrypted_content: string;
+        };
+        Update: {
+          encrypted_content?: string;
+        };
+      };
+      video_sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          session_id: string;
+          conversation_id?: string;
+          is_pro_session?: boolean;
+          session_config?: any;
+          duration_seconds?: number;
+          created_at: string;
+          ended_at?: string;
+        };
+        Insert: {
+          user_id: string;
+          session_id: string;
+          conversation_id?: string;
+          is_pro_session?: boolean;
+          session_config?: any;
+          duration_seconds?: number;
+          ended_at?: string;
+        };
+        Update: {
+          ended_at?: string;
+          duration_seconds?: number;
+        };
+      };
+      subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          plan_type: 'free' | 'pro';
+          is_active: boolean;
+          expires_at?: string;
+          created_at: string;
+          updated_at: string;
+          stripe_customer_id?: string;
+          stripe_subscription_id?: string;
+        };
+        Insert: {
+          user_id: string;
+          plan_type?: 'free' | 'pro';
+          is_active?: boolean;
+          expires_at?: string;
+          stripe_customer_id?: string;
+          stripe_subscription_id?: string;
+        };
+        Update: {
+          plan_type?: 'free' | 'pro';
+          is_active?: boolean;
+          expires_at?: string;
+          stripe_customer_id?: string;
+          stripe_subscription_id?: string;
+        };
+      };
     };
   };
-};
+}

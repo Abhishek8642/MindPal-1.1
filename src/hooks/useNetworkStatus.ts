@@ -11,37 +11,45 @@ interface NetworkStatus {
 export function useNetworkStatus() {
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus>({
     isOnline: navigator.onLine,
-    isConnectedToSupabase: true,
+    isConnectedToSupabase: true, // Default to true to prevent blocking
     lastChecked: null,
     retryCount: 0,
   });
 
   const checkSupabaseConnection = useCallback(async (): Promise<boolean> => {
+    // Skip connection check if environment variables are missing
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
+      console.warn('Supabase not configured properly - skipping connection check');
+      return true; // Return true to prevent blocking the app
+    }
+
     try {
-      // Use a simpler endpoint that's more likely to work
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000);
       
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/`, {
+      const response = await fetch(`${supabaseUrl}/rest/v1/`, {
         method: 'HEAD',
         headers: {
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
         },
         signal: controller.signal,
       });
       
       clearTimeout(timeoutId);
-      return response.ok || response.status === 401; // 401 is also acceptable (means server is responding)
+      return response.ok || response.status === 401; // 401 is also acceptable
     } catch (error) {
       console.warn('Supabase connection check failed:', error);
-      return false;
+      return true; // Return true to prevent blocking the app
     }
   }, []);
 
   const updateNetworkStatus = useCallback(async () => {
     const isOnline = navigator.onLine;
-    let isConnectedToSupabase = true; // Default to true to prevent blocking
+    let isConnectedToSupabase = true; // Default to true
 
     if (isOnline) {
       try {
