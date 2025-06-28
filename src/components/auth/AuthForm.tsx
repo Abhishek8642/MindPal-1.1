@@ -4,24 +4,6 @@ import { Brain, Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, Zap, Star } from 
 import { useAuth } from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
 
-const TypewriterText = ({ text, delay = 0 }: { text: string; delay?: number }) => {
-  const [displayText, setDisplayText] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (currentIndex < text.length) {
-        setDisplayText(prev => prev + text[currentIndex]);
-        setCurrentIndex(prev => prev + 1);
-      }
-    }, delay + currentIndex * 50);
-
-    return () => clearTimeout(timer);
-  }, [currentIndex, text, delay]);
-
-  return <span>{displayText}<span className="animate-pulse">|</span></span>;
-};
-
 const FloatingParticle = ({ delay }: { delay: number }) => (
   <motion.div
     className="absolute w-2 h-2 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full opacity-70"
@@ -153,19 +135,16 @@ export function AuthForm() {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5 }}
               >
-                <TypewriterText text="MindPal" delay={500} />
+                MindPal
               </motion.h1>
               
               <motion.p
                 className="text-white/60 text-sm leading-relaxed"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 1.5 }}
+                transition={{ delay: 0.7 }}
               >
-                <TypewriterText 
-                  text="Your AI companion for memory, mental health, and voice assistance" 
-                  delay={1500} 
-                />
+                Your AI companion for memory, mental health, and voice assistance
               </motion.p>
             </motion.div>
 

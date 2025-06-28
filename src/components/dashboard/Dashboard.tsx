@@ -30,24 +30,6 @@ import { format } from 'date-fns';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-const TypewriterText = ({ text, delay = 0 }: { text: string; delay?: number }) => {
-  const [displayText, setDisplayText] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (currentIndex < text.length) {
-        setDisplayText(prev => prev + text[currentIndex]);
-        setCurrentIndex(prev => prev + 1);
-      }
-    }, delay + currentIndex * 50);
-
-    return () => clearTimeout(timer);
-  }, [currentIndex, text, delay]);
-
-  return <span>{displayText}</span>;
-};
-
 const FloatingElement = ({ children, delay }: { children: React.ReactNode; delay: number }) => (
   <motion.div
     initial={{ y: 20, opacity: 0 }}
@@ -347,15 +329,15 @@ export function Dashboard() {
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, duration: 0.6 }}
           >
-            <TypewriterText text={`Welcome back, ${user?.email?.split('@')[0]}!`} />
+            Welcome back, {user?.email?.split('@')[0]}!
           </motion.h1>
           <motion.p
             className="text-white/60 text-xl"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 1.5 }}
+            transition={{ delay: 0.4 }}
           >
-            <TypewriterText text={format(new Date(), 'EEEE, MMMM do, yyyy')} delay={1500} />
+            {format(new Date(), 'EEEE, MMMM do, yyyy')}
           </motion.p>
           
           {/* Decorative Elements */}
