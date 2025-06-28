@@ -37,7 +37,7 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SaEOlO
       await createCheckoutSession(productId);
     } catch (error) {
       console.error('Subscription error:', error);
-      toast.error('Failed to start subscription process');
+      toast.error('Failed to start payment process');
     } finally {
       setProcessingPlan(null);
     }
@@ -85,7 +85,7 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SaEOlO
                   <Crown className="h-6 w-6 text-white" />
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Upgrade to MindPal Pro
+                  Get MindPal Pro
                 </h2>
               </div>
               <button
@@ -96,18 +96,18 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SaEOlO
               </button>
             </div>
             <p className="text-gray-600 dark:text-gray-300">
-              Unlock the full potential of MindPal with our Pro subscription
+              Unlock the full potential of MindPal with a one-time purchase
             </p>
           </div>
 
           {/* Stripe Configuration Warning */}
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 mb-6">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6">
             <div className="flex items-start space-x-3">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-1" />
+              <AlertTriangle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
               <div>
-                <p className="font-medium text-yellow-800 dark:text-yellow-300">Stripe Configuration Required</p>
-                <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
-                  To enable payments, you need to create a <strong>recurring price</strong> in your Stripe dashboard. Go to Products → Create/Select Product → Add Price → Set billing to "Recurring\" → Copy the Price ID and update it in stripe-config.ts.
+                <p className="font-medium text-blue-800 dark:text-blue-300">One-Time Payment</p>
+                <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
+                  This is a one-time payment for lifetime access to MindPal Pro features. Your price ID is configured correctly for payment mode.
                 </p>
               </div>
             </div>
@@ -129,7 +129,7 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SaEOlO
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                     <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium flex items-center space-x-1">
                       <Star className="h-3 w-3" />
-                      <span>Most Popular</span>
+                      <span>One-Time Purchase</span>
                     </div>
                   </div>
 
@@ -143,7 +143,7 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SaEOlO
                         {formatPrice(product.price, product.currency)}
                       </span>
                       <span className="text-gray-500 dark:text-gray-400">
-                        /month
+                        one-time
                       </span>
                     </div>
                   </div>
@@ -176,12 +176,12 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SaEOlO
                     ) : isProUser() ? (
                       <>
                         <Check className="h-4 w-4" />
-                        <span>Current Plan</span>
+                        <span>Already Purchased</span>
                       </>
                     ) : (
                       <>
                         <CreditCard className="h-4 w-4" />
-                        <span>Subscribe Now</span>
+                        <span>Buy Now</span>
                       </>
                     )}
                   </button>
@@ -219,9 +219,9 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SaEOlO
               <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-xl inline-block mb-3">
                 <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
-              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Cancel Anytime</h4>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Lifetime Access</h4>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                No long-term commitment required
+                Pay once, use forever
               </p>
             </div>
             
@@ -239,7 +239,7 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SaEOlO
           {/* Footer */}
           <div className="text-center text-sm text-gray-500 dark:text-gray-400">
             <p>
-              By subscribing, you agree to our{' '}
+              By purchasing, you agree to our{' '}
               <a href="#" className="text-purple-600 dark:text-purple-400 hover:underline">
                 Terms of Service
               </a>{' '}

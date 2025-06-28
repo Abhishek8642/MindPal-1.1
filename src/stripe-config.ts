@@ -8,23 +8,16 @@ export interface StripeProduct {
   mode: 'payment' | 'subscription';
 }
 
-// IMPORTANT: Replace 'price_demo_recurring_monthly' with your actual recurring price ID from Stripe
-// To create a recurring price:
-// 1. Go to your Stripe Dashboard
-// 2. Navigate to Products
-// 3. Create or select a product
-// 4. Add a new price with "Recurring" billing
-// 5. Set the interval to "Monthly" or "Yearly"
-// 6. Copy the Price ID and replace the demo value below
+// Updated with your actual Stripe Price ID for one-time payment
 export const STRIPE_PRODUCTS: StripeProduct[] = [
   {
     id: 'prod_SaEOlOgANKu2QM',
     name: 'MindPal Pro',
     description: 'Advanced AI personality customization, Extended mood analytics and insights, Priority support and early access to features, Family sharing and parental reports',
-    priceId: 'price_demo_recurring_monthly', // Replace with your actual recurring price ID
+    priceId: 'price_1Rf3vbP9u4ZhsDFE4NWkQWdQ', // Your actual one-time payment price ID
     price: 1.00,
     currency: 'USD',
-    mode: 'subscription'
+    mode: 'payment' // Changed to 'payment' for one-time payment
   }
 ];
 
