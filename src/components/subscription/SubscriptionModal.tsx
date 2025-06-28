@@ -21,7 +21,7 @@ interface SubscriptionModalProps {
   selectedPlan?: string;
 }
 
-export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_demo_mindpal_pro' }: SubscriptionModalProps) {
+export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SaEOlOgANKu2QM' }: SubscriptionModalProps) {
   const { createCheckoutSession, loading, isProUser } = useStripe();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
 
@@ -44,7 +44,7 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_demo_m
   };
 
   const formatPrice = (price: number, currency: string) => {
-    return new Intl.NumberFormat('en-IN', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currency,
       minimumFractionDigits: 0,
@@ -107,7 +107,7 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_demo_m
               <div>
                 <p className="font-medium text-yellow-800 dark:text-yellow-300">Stripe Configuration Required</p>
                 <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
-                  To enable payments, you need to create a product in your Stripe dashboard and update the price ID in stripe-config.ts. The current demo price ID 'price_demo_199_inr_monthly' doesn't exist in Stripe.
+                  To enable payments, you need to create a <strong>recurring price</strong> in your Stripe dashboard. Go to Products → Create/Select Product → Add Price → Set billing to "Recurring" → Copy the Price ID and update it in stripe-config.ts.
                 </p>
               </div>
             </div>
