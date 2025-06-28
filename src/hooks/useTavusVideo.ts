@@ -112,7 +112,24 @@ export function useTavusVideo() {
 
       if (!response.ok) {
         const errorData = await response.text();
-        throw new Error(`Tavus API error: ${response.status} - ${errorData}`);
+        let errorMessage = `Tavus API error: ${response.status} - ${errorData}`;
+        
+        // Handle specific error cases
+        if (response.status === 400) {
+          try {
+            const parsedError = JSON.parse(errorData);
+            if (parsedError.message && parsedError.message.includes('maximum concurrent conversations')) {
+              errorMessage = 'You already have an active video session. Please end your current session before starting a new one, or try again in a few minutes if you believe no session is active.';
+            }
+          } catch (parseError) {
+            // If we can't parse the error, check if it contains the concurrent conversations message
+            if (errorData.includes('maximum concurrent conversations')) {
+              errorMessage = 'You already have an active video session. Please end your current session before starting a new one, or try again in a few minutes if you believe no session is active.';
+            }
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
