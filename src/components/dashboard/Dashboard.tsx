@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { 
   CheckSquare, 
   Heart, 
@@ -12,7 +12,12 @@ import {
   Plus,
   Bell,
   WifiOff,
-  AlertTriangle
+  AlertTriangle,
+  Sparkles,
+  Zap,
+  Star,
+  Rocket,
+  Crown
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
@@ -25,18 +30,49 @@ import { format } from 'date-fns';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
+const TypewriterText = ({ text, delay = 0 }: { text: string; delay?: number }) => {
+  const [displayText, setDisplayText] = useState('');
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (currentIndex < text.length) {
+        setDisplayText(prev => prev + text[currentIndex]);
+        setCurrentIndex(prev => prev + 1);
+      }
+    }, delay + currentIndex * 50);
+
+    return () => clearTimeout(timer);
+  }, [currentIndex, text, delay]);
+
+  return <span>{displayText}</span>;
+};
+
+const FloatingElement = ({ children, delay }: { children: React.ReactNode; delay: number }) => (
+  <motion.div
+    initial={{ y: 20, opacity: 0 }}
+    animate={{ y: 0, opacity: 1 }}
+    transition={{ delay, duration: 0.6, ease: "easeOut" }}
+    whileHover={{ y: -5, transition: { duration: 0.2 } }}
+  >
+    {children}
+  </motion.div>
+);
+
 export function Dashboard() {
   const { user, handleSupabaseError } = useAuth();
   const { isOnline, isConnectedToSupabase, withRetry } = useNetworkStatus();
   const { isProUser } = useStripe();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { scrollY } = useScroll();
   const { 
     scheduleMoodReminder, 
     scheduleDailySummary, 
     requestNotificationPermission,
     permission 
   } = useNotifications();
+  
   const [stats, setStats] = useState({
     totalTasks: 0,
     completedTasks: 0,
@@ -47,6 +83,9 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
+  const parallaxY = useTransform(scrollY, [0, 500], [0, -150]);
+  const parallaxOpacity = useTransform(scrollY, [0, 300], [1, 0.3]);
+
   // Handle payment success/cancel from URL params
   useEffect(() => {
     const success = searchParams.get('success');
@@ -54,11 +93,9 @@ export function Dashboard() {
     
     if (success === 'true') {
       toast.success('Payment successful! Welcome to MindPal Pro! 🎉');
-      // Clear URL params
       window.history.replaceState({}, '', '/dashboard');
     } else if (canceled === 'true') {
       toast.error('Payment was canceled. You can try again anytime.');
-      // Clear URL params
       window.history.replaceState({}, '', '/dashboard');
     }
   }, [searchParams]);
@@ -75,7 +112,6 @@ export function Dashboard() {
     try {
       setError(null);
       
-      // Get task stats with retry
       const taskData = await withRetry(async () => {
         const { data, error } = await supabase
           .from('tasks')
@@ -91,7 +127,6 @@ export function Dashboard() {
         return data;
       });
 
-      // Get today's mood with retry
       const today = new Date().toISOString().split('T')[0];
       const moodData = await withRetry(async () => {
         const { data, error } = await supabase
@@ -111,7 +146,6 @@ export function Dashboard() {
         return data;
       });
 
-      // Get voice sessions count with retry
       const voiceData = await withRetry(async () => {
         const { data, error } = await supabase
           .from('chat_sessions')
@@ -144,7 +178,6 @@ export function Dashboard() {
   useEffect(() => {
     if (user) {
       loadStats();
-      // Request notification permission on dashboard load
       if (permission === 'default') {
         requestNotificationPermission().catch(console.warn);
       }
@@ -203,143 +236,234 @@ export function Dashboard() {
       value: `${stats.completedTasks}/${stats.totalTasks}`,
       subtitle: `${Math.round(completionRate)}% completion rate`,
       icon: CheckSquare,
-      color: 'from-green-400 to-emerald-500',
-      bgColor: 'bg-green-50 dark:bg-green-900/20',
+      color: 'from-green-400 via-emerald-500 to-teal-500',
+      bgColor: 'bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-900/20 dark:to-emerald-900/20',
       textColor: 'text-green-700 dark:text-green-400',
+      glowColor: 'shadow-green-500/25',
     },
     {
       title: "Today's Mood",
       value: stats.todayMood ? `${stats.todayMood}/10` : 'Not logged',
       subtitle: stats.todayMood ? 'Feeling great!' : 'Log your mood',
       icon: Heart,
-      color: 'from-pink-400 to-rose-500',
-      bgColor: 'bg-pink-50 dark:bg-pink-900/20',
+      color: 'from-pink-400 via-rose-500 to-red-500',
+      bgColor: 'bg-gradient-to-br from-pink-50/50 to-rose-50/50 dark:from-pink-900/20 dark:to-rose-900/20',
       textColor: 'text-pink-700 dark:text-pink-400',
+      glowColor: 'shadow-pink-500/25',
     },
     {
       title: 'Chat Sessions',
       value: stats.voiceSessions.toString(),
       subtitle: 'AI conversations',
       icon: Mic,
-      color: 'from-purple-400 to-violet-500',
-      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+      color: 'from-purple-400 via-violet-500 to-indigo-500',
+      bgColor: 'bg-gradient-to-br from-purple-50/50 to-violet-50/50 dark:from-purple-900/20 dark:to-violet-900/20',
       textColor: 'text-purple-700 dark:text-purple-400',
+      glowColor: 'shadow-purple-500/25',
     },
     {
       title: 'Streak',
       value: '7 days',
       subtitle: 'Keep it up!',
       icon: Award,
-      color: 'from-orange-400 to-amber-500',
-      bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+      color: 'from-orange-400 via-amber-500 to-yellow-500',
+      bgColor: 'bg-gradient-to-br from-orange-50/50 to-amber-50/50 dark:from-orange-900/20 dark:to-amber-900/20',
       textColor: 'text-orange-700 dark:text-orange-400',
+      glowColor: 'shadow-orange-500/25',
     },
   ];
 
   if (loading) {
     return (
       <div className="space-y-8">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+        <motion.div
+          className="text-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent mb-2">
             Welcome back, {user?.email?.split('@')[0]}!
           </h1>
-          <p className="text-gray-600 dark:text-gray-300 text-lg">
+          <p className="text-white/60 text-lg">
             {format(new Date(), 'EEEE, MMMM do, yyyy')}
           </p>
-        </div>
+        </motion.div>
         
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+          <motion.div
+            className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Header */}
+    <div className="space-y-8 relative">
+      {/* Parallax Background Elements */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-center"
+        className="absolute inset-0 pointer-events-none"
+        style={{ y: parallaxY, opacity: parallaxOpacity }}
       >
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-          Welcome back, {user?.email?.split('@')[0]}!
-        </h1>
-        <p className="text-gray-600 dark:text-gray-300 text-lg">
-          {format(new Date(), 'EEEE, MMMM do, yyyy')}
-        </p>
+        <div className="absolute top-20 left-10">
+          <motion.div
+            animate={{ rotate: 360, scale: [1, 1.2, 1] }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          >
+            <Sparkles className="h-8 w-8 text-purple-300/20" />
+          </motion.div>
+        </div>
+        <div className="absolute top-40 right-20">
+          <motion.div
+            animate={{ rotate: -360, scale: [1, 1.1, 1] }}
+            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+          >
+            <Zap className="h-6 w-6 text-blue-300/20" />
+          </motion.div>
+        </div>
+        <div className="absolute bottom-20 left-1/4">
+          <motion.div
+            animate={{ rotate: 360, y: [-10, 10, -10] }}
+            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          >
+            <Star className="h-10 w-10 text-yellow-300/20" />
+          </motion.div>
+        </div>
       </motion.div>
 
-      {/* Subscription Banner - Always show since subscription loading is disabled */}
-      <SubscriptionBanner onUpgrade={() => setShowSubscriptionModal(true)} />
+      {/* Welcome Header */}
+      <FloatingElement delay={0}>
+        <motion.div
+          className="text-center relative"
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <motion.h1
+            className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent mb-4"
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+          >
+            <TypewriterText text={`Welcome back, ${user?.email?.split('@')[0]}!`} />
+          </motion.h1>
+          <motion.p
+            className="text-white/60 text-xl"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.5 }}
+          >
+            <TypewriterText text={format(new Date(), 'EEEE, MMMM do, yyyy')} delay={1500} />
+          </motion.p>
+          
+          {/* Decorative Elements */}
+          <motion.div
+            className="absolute -top-4 left-1/2 transform -translate-x-1/2"
+            animate={{ y: [-5, 5, -5], rotate: [0, 180, 360] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Crown className="h-8 w-8 text-yellow-400/50" />
+          </motion.div>
+        </motion.div>
+      </FloatingElement>
+
+      {/* Subscription Banner */}
+      <FloatingElement delay={0.2}>
+        <motion.div
+          whileHover={{ scale: 1.02, y: -5 }}
+          transition={{ duration: 0.2 }}
+        >
+          <SubscriptionBanner onUpgrade={() => setShowSubscriptionModal(true)} />
+        </motion.div>
+      </FloatingElement>
 
       {/* Connection Error Banner */}
       {(!isOnline || !isConnectedToSupabase || error) && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              {!isOnline ? (
-                <WifiOff className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-              ) : (
-                <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-              )}
-              <div>
-                <p className="font-medium text-yellow-800 dark:text-yellow-300">
-                  {!isOnline ? 'No Internet Connection' : 
-                   !isConnectedToSupabase ? 'Server Connection Issues' : 
-                   'Data Loading Issues'}
-                </p>
-                <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                  {!isOnline 
-                    ? 'Some features may not work properly without internet access.'
-                    : !isConnectedToSupabase
-                    ? 'Cannot connect to Supabase server. Please check your configuration.'
-                    : error || 'Some data may not be up to date. The app will continue to work normally.'
-                  }
-                </p>
+        <FloatingElement delay={0.3}>
+          <motion.div
+            className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 backdrop-blur-xl border border-yellow-500/30 rounded-2xl p-6"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            whileHover={{ scale: 1.02 }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                >
+                  {!isOnline ? (
+                    <WifiOff className="h-6 w-6 text-yellow-400" />
+                  ) : (
+                    <AlertTriangle className="h-6 w-6 text-yellow-400" />
+                  )}
+                </motion.div>
+                <div>
+                  <p className="font-semibold text-yellow-200">
+                    {!isOnline ? 'No Internet Connection' : 
+                     !isConnectedToSupabase ? 'Server Connection Issues' : 
+                     'Data Loading Issues'}
+                  </p>
+                  <p className="text-sm text-yellow-300/80">
+                    {!isOnline 
+                      ? 'Some features may not work properly without internet access.'
+                      : !isConnectedToSupabase
+                      ? 'Cannot connect to Supabase server. Please check your configuration.'
+                      : error || 'Some data may not be up to date. The app will continue to work normally.'
+                    }
+                  </p>
+                </div>
               </div>
+              <motion.button
+                onClick={() => handleQuickAction('retry-connection')}
+                className="bg-yellow-500 hover:bg-yellow-400 text-black px-6 py-3 rounded-xl font-semibold transition-colors duration-200"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Retry
+              </motion.button>
             </div>
-            <button
-              onClick={() => handleQuickAction('retry-connection')}
-              className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-            >
-              Retry
-            </button>
-          </div>
-        </motion.div>
+          </motion.div>
+        </FloatingElement>
       )}
 
       {/* Notification Permission Banner */}
       {permission !== 'granted' && !error && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <div>
-                <p className="font-medium text-blue-800 dark:text-blue-300">Enable Notifications</p>
-                <p className="text-sm text-blue-700 dark:text-blue-400">
-                  Get reminders for tasks, mood check-ins, and daily summaries
-                </p>
+        <FloatingElement delay={0.4}>
+          <motion.div
+            className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 backdrop-blur-xl border border-blue-500/30 rounded-2xl p-6"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            whileHover={{ scale: 1.02 }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <Bell className="h-6 w-6 text-blue-400" />
+                </motion.div>
+                <div>
+                  <p className="font-semibold text-blue-200">Enable Notifications</p>
+                  <p className="text-sm text-blue-300/80">
+                    Get reminders for tasks, mood check-ins, and daily summaries
+                  </p>
+                </div>
               </div>
+              <motion.button
+                onClick={() => handleQuickAction('enable-notifications')}
+                className="bg-blue-500 hover:bg-blue-400 text-white px-6 py-3 rounded-xl font-semibold transition-colors duration-200"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Enable
+              </motion.button>
             </div>
-            <button
-              onClick={() => handleQuickAction('enable-notifications')}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-            >
-              Enable
-            </button>
-          </div>
-        </motion.div>
+          </motion.div>
+        </FloatingElement>
       )}
 
       {/* Stats Grid */}
@@ -347,133 +471,247 @@ export function Dashboard() {
         {statCards.map((card, index) => {
           const Icon = card.icon;
           return (
-            <motion.div
-              key={card.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              className={`${card.bgColor} rounded-2xl p-6 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1`}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className={`bg-gradient-to-r ${card.color} p-3 rounded-xl`}>
-                  <Icon className="h-6 w-6 text-white" />
+            <FloatingElement key={card.title} delay={0.5 + index * 0.1}>
+              <motion.div
+                className={`${card.bgColor} backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer transform hover:shadow-2xl ${card.glowColor} relative overflow-hidden group`}
+                whileHover={{ scale: 1.05, y: -10 }}
+                whileTap={{ scale: 0.95 }}
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 + index * 0.1, duration: 0.6 }}
+              >
+                {/* Animated Background Gradient */}
+                <motion.div
+                  className={`absolute inset-0 bg-gradient-to-r ${card.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}
+                  initial={false}
+                  animate={{ opacity: [0, 0.05, 0] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                />
+                
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-4">
+                    <motion.div
+                      className={`bg-gradient-to-r ${card.color} p-3 rounded-xl shadow-lg`}
+                      whileHover={{ rotate: 360, scale: 1.1 }}
+                      transition={{ duration: 0.6 }}
+                    >
+                      <Icon className="h-6 w-6 text-white" />
+                    </motion.div>
+                    <motion.div
+                      animate={{ y: [-2, 2, -2] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <TrendingUp className="h-4 w-4 text-white/40" />
+                    </motion.div>
+                  </div>
+                  <div className={`${card.textColor} space-y-1`}>
+                    <p className="text-sm font-medium opacity-80">{card.title}</p>
+                    <motion.p
+                      className="text-3xl font-bold"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.7 + index * 0.1, type: "spring", stiffness: 200 }}
+                    >
+                      {card.value}
+                    </motion.p>
+                    <p className="text-xs opacity-70">{card.subtitle}</p>
+                  </div>
                 </div>
-                <TrendingUp className="h-4 w-4 text-gray-400" />
-              </div>
-              <div className={`${card.textColor} space-y-1`}>
-                <p className="text-sm font-medium opacity-80">{card.title}</p>
-                <p className="text-2xl font-bold">{card.value}</p>
-                <p className="text-xs opacity-70">{card.subtitle}</p>
-              </div>
-            </motion.div>
+              </motion.div>
+            </FloatingElement>
           );
         })}
       </div>
 
       {/* Quick Actions */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.4 }}
-        className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-700"
-      >
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center space-x-3">
-          <Target className="h-6 w-6 text-purple-600" />
-          <span>Quick Actions</span>
-        </h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => handleQuickAction('voice')}
-            className="bg-gradient-to-r from-purple-500 to-violet-600 text-white p-6 rounded-xl hover:shadow-lg transition-all duration-200 text-left"
-          >
-            <Mic className="h-8 w-8 mb-3" />
-            <h3 className="font-semibold mb-1">Voice Chat</h3>
-            <p className="text-sm opacity-90">Talk to your AI companion</p>
-          </motion.button>
-
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => handleQuickAction('mood')}
-            className="bg-gradient-to-r from-pink-500 to-rose-600 text-white p-6 rounded-xl hover:shadow-lg transition-all duration-200 text-left"
-          >
-            <Heart className="h-8 w-8 mb-3" />
-            <h3 className="font-semibold mb-1">Mood Check</h3>
-            <p className="text-sm opacity-90">Log your emotions</p>
-          </motion.button>
-
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => handleQuickAction('task')}
-            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-6 rounded-xl hover:shadow-lg transition-all duration-200 text-left"
-          >
-            <CheckSquare className="h-8 w-8 mb-3" />
-            <h3 className="font-semibold mb-1">Add Task</h3>
-            <p className="text-sm opacity-90">Create a new reminder</p>
-          </motion.button>
-        </div>
-
-        {/* Notification Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => handleQuickAction('schedule-mood-reminder')}
-            disabled={!isConnectedToSupabase}
-            className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white p-4 rounded-xl hover:shadow-lg transition-all duration-200 text-left flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Plus className="h-6 w-6" />
-            <div>
-              <h3 className="font-semibold">Schedule Mood Reminder</h3>
-              <p className="text-sm opacity-90">Get reminded to check your mood tomorrow</p>
+      <FloatingElement delay={0.9}>
+        <motion.div
+          className="bg-black/20 backdrop-blur-xl rounded-2xl p-8 border border-white/10 relative overflow-hidden"
+          whileHover={{ scale: 1.01 }}
+        >
+          {/* Background Animation */}
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-r from-purple-600/5 via-blue-600/5 to-pink-600/5"
+            animate={{ x: [-100, 100, -100] }}
+            transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+          />
+          
+          <div className="relative z-10">
+            <motion.h2
+              className="text-3xl font-bold text-white mb-8 flex items-center space-x-3"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 1 }}
+            >
+              <motion.div
+                animate={{ rotate: [0, 360] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              >
+                <Target className="h-8 w-8 text-purple-400" />
+              </motion.div>
+              <span>Quick Actions</span>
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <Rocket className="h-6 w-6 text-blue-400" />
+              </motion.div>
+            </motion.h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              {[
+                {
+                  action: 'voice',
+                  icon: Mic,
+                  title: 'Voice Chat',
+                  subtitle: 'Talk to your AI companion',
+                  gradient: 'from-purple-500 via-violet-600 to-indigo-600',
+                  delay: 1.1
+                },
+                {
+                  action: 'mood',
+                  icon: Heart,
+                  title: 'Mood Check',
+                  subtitle: 'Log your emotions',
+                  gradient: 'from-pink-500 via-rose-600 to-red-600',
+                  delay: 1.2
+                },
+                {
+                  action: 'task',
+                  icon: CheckSquare,
+                  title: 'Add Task',
+                  subtitle: 'Create a new reminder',
+                  gradient: 'from-green-500 via-emerald-600 to-teal-600',
+                  delay: 1.3
+                }
+              ].map((item) => (
+                <motion.button
+                  key={item.action}
+                  onClick={() => handleQuickAction(item.action)}
+                  className={`bg-gradient-to-r ${item.gradient} text-white p-6 rounded-2xl hover:shadow-2xl transition-all duration-300 text-left relative overflow-hidden group`}
+                  whileHover={{ scale: 1.05, y: -5 }}
+                  whileTap={{ scale: 0.95 }}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: item.delay, duration: 0.6 }}
+                >
+                  <motion.div
+                    className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    initial={false}
+                  />
+                  <div className="relative z-10">
+                    <motion.div
+                      whileHover={{ rotate: 360, scale: 1.2 }}
+                      transition={{ duration: 0.6 }}
+                    >
+                      <item.icon className="h-8 w-8 mb-3" />
+                    </motion.div>
+                    <h3 className="font-bold text-lg mb-1">{item.title}</h3>
+                    <p className="text-sm opacity-90">{item.subtitle}</p>
+                  </div>
+                </motion.button>
+              ))}
             </div>
-          </motion.button>
 
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => handleQuickAction('schedule-daily-summary')}
-            disabled={!isConnectedToSupabase}
-            className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4 rounded-xl hover:shadow-lg transition-all duration-200 text-left flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Plus className="h-6 w-6" />
-            <div>
-              <h3 className="font-semibold">Schedule Daily Summary</h3>
-              <p className="text-sm opacity-90">Get your end-of-day report tonight</p>
+            {/* Notification Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[
+                {
+                  action: 'schedule-mood-reminder',
+                  title: 'Schedule Mood Reminder',
+                  subtitle: 'Get reminded to check your mood tomorrow',
+                  gradient: 'from-blue-500 via-cyan-600 to-teal-600',
+                  delay: 1.4
+                },
+                {
+                  action: 'schedule-daily-summary',
+                  title: 'Schedule Daily Summary',
+                  subtitle: 'Get your end-of-day report tonight',
+                  gradient: 'from-indigo-500 via-purple-600 to-pink-600',
+                  delay: 1.5
+                }
+              ].map((item) => (
+                <motion.button
+                  key={item.action}
+                  onClick={() => handleQuickAction(item.action)}
+                  disabled={!isConnectedToSupabase}
+                  className={`bg-gradient-to-r ${item.gradient} text-white p-6 rounded-2xl hover:shadow-2xl transition-all duration-300 text-left flex items-center space-x-4 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group`}
+                  whileHover={{ scale: 1.02, y: -3 }}
+                  whileTap={{ scale: 0.98 }}
+                  initial={{ opacity: 0, x: -30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: item.delay, duration: 0.6 }}
+                >
+                  <motion.div
+                    className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    initial={false}
+                  />
+                  <div className="relative z-10 flex items-center space-x-4">
+                    <motion.div
+                      whileHover={{ rotate: 360, scale: 1.1 }}
+                      transition={{ duration: 0.6 }}
+                    >
+                      <Plus className="h-6 w-6" />
+                    </motion.div>
+                    <div>
+                      <h3 className="font-bold">{item.title}</h3>
+                      <p className="text-sm opacity-90">{item.subtitle}</p>
+                    </div>
+                  </div>
+                </motion.button>
+              ))}
             </div>
-          </motion.button>
-        </div>
-      </motion.div>
+          </div>
+        </motion.div>
+      </FloatingElement>
 
       {/* Built on Bolt Badge */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.6 }}
-        className="flex justify-center"
-      >
-        <a
-          href="https://bolt.new"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5"
+      <FloatingElement delay={1.6}>
+        <motion.div
+          className="flex justify-center"
+          whileHover={{ scale: 1.05 }}
         >
-          <Brain className="h-4 w-4" />
-          <span>Built on Bolt</span>
-          <ExternalLink className="h-3 w-3" />
-        </a>
-      </motion.div>
+          <motion.a
+            href="https://bolt.new"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center space-x-3 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white px-6 py-3 rounded-full text-sm font-medium hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden group"
+            whileHover={{ y: -5 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <motion.div
+              className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              initial={false}
+            />
+            <div className="relative z-10 flex items-center space-x-3">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              >
+                <Brain className="h-4 w-4" />
+              </motion.div>
+              <span>Built on Bolt</span>
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                <ExternalLink className="h-3 w-3" />
+              </motion.div>
+            </div>
+          </motion.a>
+        </motion.div>
+      </FloatingElement>
 
       {/* Subscription Modal */}
-      <SubscriptionModal
-        isOpen={showSubscriptionModal}
-        onClose={() => setShowSubscriptionModal(false)}
-        selectedPlan="prod_demo_mindpal_pro"
-      />
+      <AnimatePresence>
+        {showSubscriptionModal && (
+          <SubscriptionModal
+            isOpen={showSubscriptionModal}
+            onClose={() => setShowSubscriptionModal(false)}
+            selectedPlan="prod_demo_mindpal_pro"
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
