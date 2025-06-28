@@ -23,7 +23,7 @@ import toast from 'react-hot-toast';
 export function Settings() {
   const { user } = useAuth();
   const { settings, updateSettings, loading } = useSettings();
-  const { currentSubscription, isProUser, createPortalSession, loadCurrentSubscription } = useStripe();
+  const { currentSubscription, isProUser, createPortalSession, loadCurrentSubscription, getCurrentPlan } = useStripe();
   const [activeTab, setActiveTab] = React.useState('profile');
   const [showSubscriptionModal, setShowSubscriptionModal] = React.useState(false);
   const [profile, setProfile] = React.useState({
@@ -139,8 +139,9 @@ export function Settings() {
   const formatSubscriptionStatus = () => {
     if (!currentSubscription) return 'Free Plan';
     
-    if (currentSubscription.is_active) {
-      return `${currentSubscription.plan_type.charAt(0).toUpperCase() + currentSubscription.plan_type.slice(1)} Plan`;
+    if (currentSubscription.subscription_status === 'active') {
+      const plan = getCurrentPlan();
+      return plan ? `${plan.name}` : 'Pro Plan';
     }
     
     return 'Expired';
@@ -481,11 +482,11 @@ export function Settings() {
                 <div className="space-y-3 mb-6">
                   <div className="flex items-center space-x-2 text-sm">
                     <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                    <span className="text-gray-700 dark:text-gray-300">Unlimited video sessions (60 minutes each)</span>
+                    <span className="text-gray-700 dark:text-gray-300">Advanced AI personality customization</span>
                   </div>
                   <div className="flex items-center space-x-2 text-sm">
                     <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                    <span className="text-gray-700 dark:text-gray-300">Advanced mood analytics and insights</span>
+                    <span className="text-gray-700 dark:text-gray-300">Extended mood analytics and insights</span>
                   </div>
                   <div className="flex items-center space-x-2 text-sm">
                     <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
@@ -493,7 +494,7 @@ export function Settings() {
                   </div>
                   <div className="flex items-center space-x-2 text-sm">
                     <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                    <span className="text-gray-700 dark:text-gray-300">Export your data and reports</span>
+                    <span className="text-gray-700 dark:text-gray-300">Family sharing and parental reports</span>
                   </div>
                 </div>
               )}
@@ -532,26 +533,26 @@ export function Settings() {
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">Plan:</span>
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {currentSubscription.plan_type.charAt(0).toUpperCase() + currentSubscription.plan_type.slice(1)}
+                      {getCurrentPlan()?.name || 'Pro'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">Status:</span>
                     <span className={`font-medium ${
-                      currentSubscription.is_active 
+                      currentSubscription.subscription_status === 'active'
                         ? 'text-green-600 dark:text-green-400' 
                         : 'text-red-600 dark:text-red-400'
                     }`}>
-                      {currentSubscription.is_active ? 'Active' : 'Inactive'}
+                      {currentSubscription.subscription_status === 'active' ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  {currentSubscription.expires_at && (
+                  {currentSubscription.current_period_end && (
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">
-                        {currentSubscription.is_active ? 'Next billing:' : 'Expired:'}
+                        {currentSubscription.subscription_status === 'active' ? 'Next billing:' : 'Expired:'}
                       </span>
                       <span className="font-medium text-gray-900 dark:text-white">
-                        {new Date(currentSubscription.expires_at).toLocaleDateString()}
+                        {new Date(currentSubscription.current_period_end * 1000).toLocaleDateString()}
                       </span>
                     </div>
                   )}
@@ -642,7 +643,7 @@ export function Settings() {
       <SubscriptionModal
         isOpen={showSubscriptionModal}
         onClose={() => setShowSubscriptionModal(false)}
-        selectedPlan="pro"
+        selectedPlan="prod_SZo2DUxaaXJyE6"
       />
     </div>
   );

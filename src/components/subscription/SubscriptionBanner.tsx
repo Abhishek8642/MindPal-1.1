@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Crown, ArrowRight, Sparkles } from 'lucide-react';
+import { STRIPE_PRODUCTS } from '../../stripe-config';
 
 interface SubscriptionBannerProps {
   onUpgrade: () => void;
@@ -8,6 +9,8 @@ interface SubscriptionBannerProps {
 }
 
 export function SubscriptionBanner({ onUpgrade, className = '' }: SubscriptionBannerProps) {
+  const proProduct = STRIPE_PRODUCTS.find(p => p.id === 'prod_SZo2DUxaaXJyE6');
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
@@ -22,7 +25,7 @@ export function SubscriptionBanner({ onUpgrade, className = '' }: SubscriptionBa
           <div>
             <h3 className="text-lg font-bold mb-1">Upgrade to MindPal Pro</h3>
             <p className="text-white/90 text-sm">
-              Unlock unlimited features for just ₹199/month
+              Unlock unlimited features for just ₹{proProduct?.price || 199}/month
             </p>
           </div>
         </div>

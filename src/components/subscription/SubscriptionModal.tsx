@@ -10,7 +10,8 @@ import {
   CreditCard,
   Loader2
 } from 'lucide-react';
-import { useStripe, SUBSCRIPTION_PLANS } from '../../hooks/useStripe';
+import { useStripe } from '../../hooks/useStripe';
+import { STRIPE_PRODUCTS } from '../../stripe-config';
 import toast from 'react-hot-toast';
 
 interface SubscriptionModalProps {
@@ -19,23 +20,20 @@ interface SubscriptionModalProps {
   selectedPlan?: string;
 }
 
-export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'pro' }: SubscriptionModalProps) {
+export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SZo2DUxaaXJyE6' }: SubscriptionModalProps) {
   const { createCheckoutSession, loading, isProUser } = useStripe();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
 
-  const handleSubscribe = async (planId: string) => {
-    if (planId === 'free') {
-      toast.success('You are already on the free plan!');
+  const handleSubscribe = async (productId: string) => {
+    const product = STRIPE_PRODUCTS.find(p => p.id === productId);
+    if (!product) {
+      toast.error('Invalid product selected');
       return;
     }
 
     try {
-      setProcessingPlan(planId);
-      const sessionId = await createCheckoutSession(planId);
-      
-      if (sessionId) {
-        toast.success('Redirecting to payment...');
-      }
+      setProcessingPlan(productId);
+      await createCheckoutSession(productId);
     } catch (error) {
       console.error('Subscription error:', error);
       toast.error('Failed to start subscription process');
@@ -50,6 +48,14 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'pro' }: Sub
       currency: currency,
       minimumFractionDigits: 0,
     }).format(price);
+  };
+
+  const getFeatures = (productId: string) => {
+    const product = STRIPE_PRODUCTS.find(p => p.id === productId);
+    if (!product) return [];
+    
+    // Split description by commas and clean up
+    return product.description.split(',').map(feature => feature.trim());
   };
 
   if (!isOpen) return null;
@@ -78,7 +84,7 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'pro' }: Sub
                   <Crown className="h-6 w-6 text-white" />
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Choose Your Plan
+                  Upgrade to MindPal Pro
                 </h2>
               </div>
               <button
@@ -93,60 +99,47 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'pro' }: Sub
             </p>
           </div>
 
-          {/* Plans Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {SUBSCRIPTION_PLANS.map((plan) => {
-              const isCurrentPlan = selectedPlan === plan.id;
-              const isPro = plan.id === 'pro';
-              const isProcessing = processingPlan === plan.id;
+          {/* Plan Card */}
+          <div className="max-w-md mx-auto">
+            {STRIPE_PRODUCTS.map((product) => {
+              const isProcessing = processingPlan === product.id;
+              const features = getFeatures(product.id);
 
               return (
                 <motion.div
-                  key={plan.id}
+                  key={product.id}
                   whileHover={{ scale: 1.02 }}
-                  className={`relative rounded-2xl p-6 border-2 transition-all duration-200 ${
-                    isPro
-                      ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20'
-                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
-                  }`}
+                  className="relative rounded-2xl p-6 border-2 border-purple-500 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20"
                 >
                   {/* Popular Badge */}
-                  {isPro && (
-                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium flex items-center space-x-1">
-                        <Star className="h-3 w-3" />
-                        <span>Most Popular</span>
-                      </div>
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium flex items-center space-x-1">
+                      <Star className="h-3 w-3" />
+                      <span>Most Popular</span>
                     </div>
-                  )}
+                  </div>
 
                   {/* Plan Header */}
-                  <div className="text-center mb-6">
+                  <div className="text-center mb-6 mt-4">
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                      {plan.name}
+                      {product.name}
                     </h3>
                     <div className="flex items-baseline justify-center space-x-1">
                       <span className="text-3xl font-bold text-gray-900 dark:text-white">
-                        {formatPrice(plan.price, plan.currency)}
+                        {formatPrice(product.price, product.currency)}
                       </span>
-                      {plan.price > 0 && (
-                        <span className="text-gray-500 dark:text-gray-400">
-                          /{plan.interval}
-                        </span>
-                      )}
+                      <span className="text-gray-500 dark:text-gray-400">
+                        /month
+                      </span>
                     </div>
                   </div>
 
                   {/* Features */}
                   <div className="space-y-3 mb-6">
-                    {plan.features.map((feature, index) => (
+                    {features.map((feature, index) => (
                       <div key={index} className="flex items-center space-x-3">
-                        <div className={`p-1 rounded-full ${
-                          isPro ? 'bg-purple-100 dark:bg-purple-900/30' : 'bg-gray-100 dark:bg-gray-700'
-                        }`}>
-                          <Check className={`h-3 w-3 ${
-                            isPro ? 'text-purple-600 dark:text-purple-400' : 'text-gray-600 dark:text-gray-400'
-                          }`} />
+                        <div className="p-1 rounded-full bg-purple-100 dark:bg-purple-900/30">
+                          <Check className="h-3 w-3 text-purple-600 dark:text-purple-400" />
                         </div>
                         <span className="text-sm text-gray-700 dark:text-gray-300">
                           {feature}
@@ -157,31 +150,24 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'pro' }: Sub
 
                   {/* Action Button */}
                   <button
-                    onClick={() => handleSubscribe(plan.id)}
-                    disabled={loading || isProcessing || (plan.id === 'free' && !isProUser())}
-                    className={`w-full py-3 px-4 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                      isPro
-                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg transform hover:-translate-y-0.5'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                    }`}
+                    onClick={() => handleSubscribe(product.id)}
+                    disabled={loading || isProcessing || isProUser()}
+                    className="w-full py-3 px-4 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg transform hover:-translate-y-0.5"
                   >
                     {isProcessing ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span>Processing...</span>
                       </>
+                    ) : isProUser() ? (
+                      <>
+                        <Check className="h-4 w-4" />
+                        <span>Current Plan</span>
+                      </>
                     ) : (
                       <>
-                        {isPro ? (
-                          <>
-                            <CreditCard className="h-4 w-4" />
-                            <span>Subscribe Now</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>Current Plan</span>
-                          </>
-                        )}
+                        <CreditCard className="h-4 w-4" />
+                        <span>Subscribe Now</span>
                       </>
                     )}
                   </button>
@@ -191,7 +177,7 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'pro' }: Sub
           </div>
 
           {/* Security Notice */}
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 mb-6">
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 mb-6 mt-8">
             <div className="flex items-center space-x-3">
               <Shield className="h-5 w-5 text-green-600 dark:text-green-400" />
               <div>

@@ -22,7 +22,7 @@ import { SubscriptionBanner } from '../subscription/SubscriptionBanner';
 import { SubscriptionModal } from '../subscription/SubscriptionModal';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 export function Dashboard() {
@@ -30,6 +30,7 @@ export function Dashboard() {
   const { isOnline, isConnectedToSupabase, withRetry } = useNetworkStatus();
   const { isProUser, loadCurrentSubscription } = useStripe();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { 
     scheduleMoodReminder, 
     scheduleDailySummary, 
@@ -45,6 +46,24 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+
+  // Handle payment success/cancel from URL params
+  useEffect(() => {
+    const success = searchParams.get('success');
+    const canceled = searchParams.get('canceled');
+    
+    if (success === 'true') {
+      toast.success('Payment successful! Welcome to MindPal Pro! 🎉');
+      // Reload subscription data
+      loadCurrentSubscription();
+      // Clear URL params
+      window.history.replaceState({}, '', '/dashboard');
+    } else if (canceled === 'true') {
+      toast.error('Payment was canceled. You can try again anytime.');
+      // Clear URL params
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, [searchParams, loadCurrentSubscription]);
 
   // Load subscription status
   useEffect(() => {
@@ -458,7 +477,7 @@ export function Dashboard() {
       <SubscriptionModal
         isOpen={showSubscriptionModal}
         onClose={() => setShowSubscriptionModal(false)}
-        selectedPlan="pro"
+        selectedPlan="prod_SZo2DUxaaXJyE6"
       />
     </div>
   );

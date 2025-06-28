@@ -18,7 +18,9 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { useSettings } from '../../hooks/useSettings';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
+import { useStripe } from '../../hooks/useStripe';
 import { useTavusVideo } from '../../hooks/useTavusVideo';
+import { SubscriptionModal } from '../subscription/SubscriptionModal';
 import toast from 'react-hot-toast';
 import Modal from 'react-modal';
 
@@ -26,6 +28,7 @@ export function VideoConsultation() {
   const { user } = useAuth();
   const { settings } = useSettings();
   const { isOnline, isConnectedToSupabase } = useNetworkStatus();
+  const { isProUser } = useStripe();
   const {
     isSessionActive,
     sessionData,
@@ -44,10 +47,9 @@ export function VideoConsultation() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [showLimitModal, setShowLimitModal] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
-  // Check if user has pro subscription (mock for now)
-  const isProUser = false; // This should come from subscription data
-  const maxSessionTime = isProUser ? 3600 : 300; // 60 minutes for pro, 5 minutes for free
+  const maxSessionTime = isProUser() ? 3600 : 300; // 60 minutes for pro, 5 minutes for free
   const timeRemaining = Math.max(0, maxSessionTime - sessionDuration);
   // Free session key should be user-specific
   const FREE_SESSION_KEY = user ? `lastFreeVideoSession_${user.id}` : 'lastFreeVideoSession';
@@ -106,7 +108,7 @@ export function VideoConsultation() {
     }
 
     // Free user: check if session was used in last 24h
-    if (!isProUser) {
+    if (!isProUser()) {
       const lastSession = localStorage.getItem(FREE_SESSION_KEY);
       if (lastSession) {
         const last = parseInt(lastSession, 10);
@@ -167,7 +169,7 @@ export function VideoConsultation() {
 
   // Auto-end session for free users at 5 min
   useEffect(() => {
-    if (!isProUser && isSessionActive && sessionDuration >= maxSessionTime) {
+    if (!isProUser() && isSessionActive && sessionDuration >= maxSessionTime) {
       handleEndSession();
       toast.error('Free session limit reached! Upgrade to Pro or come back tomorrow.');
       // Store last session timestamp
@@ -209,7 +211,7 @@ export function VideoConsultation() {
       )}
 
       {/* Subscription Notice for Free Users */}
-      {!isProUser && (
+      {!isProUser() && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -224,7 +226,10 @@ export function VideoConsultation() {
               <p className="text-gray-600 dark:text-gray-300 mb-3">
                 You can enjoy up to 5 minutes of face-to-face consultation. Upgrade to Pro for 60-minute sessions!
               </p>
-              <button className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-200">
+              <button 
+                onClick={() => setShowSubscriptionModal(true)}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-200"
+              >
                 Upgrade to Pro
               </button>
             </div>
@@ -405,7 +410,7 @@ export function VideoConsultation() {
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 dark:text-gray-400">Plan:</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {isProUser ? 'Pro' : 'Free'}
+                  {isProUser() ? 'Pro' : 'Free'}
                 </span>
               </div>
               
@@ -482,7 +487,10 @@ export function VideoConsultation() {
           <div className="flex flex-col gap-3">
             <button
               className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all duration-200"
-              onClick={() => {/* TODO: Add upgrade logic */}}
+              onClick={() => {
+                setShowLimitModal(false);
+                setShowSubscriptionModal(true);
+              }}
             >
               Upgrade to Pro
             </button>
@@ -495,6 +503,13 @@ export function VideoConsultation() {
           </div>
         </div>
       </Modal>
+
+      {/* Subscription Modal */}
+      <SubscriptionModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        selectedPlan="prod_SZo2DUxaaXJyE6"
+      />
     </div>
   );
 }
