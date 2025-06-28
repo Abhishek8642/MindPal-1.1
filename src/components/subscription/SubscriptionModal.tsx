@@ -107,7 +107,7 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SaEOlO
               <div>
                 <p className="font-medium text-yellow-800 dark:text-yellow-300">Stripe Configuration Required</p>
                 <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
-                  To enable payments, you need to create a <strong>recurring price</strong> in your Stripe dashboard. Go to Products → Create/Select Product → Add Price → Set billing to "Recurring" → Copy the Price ID and update it in stripe-config.ts.
+                  To enable payments, you need to create a <strong>recurring price</strong> in your Stripe dashboard. Go to Products → Create/Select Product → Add Price → Set billing to "Recurring\" → Copy the Price ID and update it in stripe-config.ts.
                 </p>
               </div>
             </div>
