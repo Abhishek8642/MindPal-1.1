@@ -591,7 +591,7 @@ export function Settings() {
       <SubscriptionModal
         isOpen={showSubscriptionModal}
         onClose={() => setShowSubscriptionModal(false)}
-        selectedPlan="prod_SZo2DUxaaXJyE6"
+        selectedPlan="prod_demo_mindpal_pro"
       />
     </div>
   );

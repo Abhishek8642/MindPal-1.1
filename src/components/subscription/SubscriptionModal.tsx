@@ -107,7 +107,7 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_demo_m
               <div>
                 <p className="font-medium text-yellow-800 dark:text-yellow-300">Stripe Configuration Required</p>
                 <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
-                  The Stripe product 'prod_SZo2DUxaaXJyE6' was not found. Please create this product in your Stripe dashboard with the correct price ID, or update the configuration in stripe-config.ts.
+                  To enable payments, you need to create a product in your Stripe dashboard and update the price ID in stripe-config.ts. The current demo price ID 'price_demo_199_inr_monthly' doesn't exist in Stripe.
                 </p>
               </div>
             </div>
