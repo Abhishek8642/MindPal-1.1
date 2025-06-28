@@ -13,7 +13,9 @@ import {
   Settings,
   User,
   Wifi,
-  WifiOff
+  WifiOff,
+  Shield,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useSettings } from '../../hooks/useSettings';
@@ -48,6 +50,8 @@ export function VideoConsultation() {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [mediaPermissionError, setMediaPermissionError] = useState<string | null>(null);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
 
   const maxSessionTime = isProUser() ? 3600 : 300; // 60 minutes for pro, 5 minutes for free
   const timeRemaining = Math.max(0, maxSessionTime - sessionDuration);
@@ -75,12 +79,27 @@ export function VideoConsultation() {
           audio: true
         });
         setLocalStream(stream);
+        setMediaPermissionError(null);
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error accessing media devices:', error);
-        toast.error('Unable to access camera/microphone');
+        
+        // Handle different types of permission errors
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          setMediaPermissionError('Camera and microphone access denied. Please allow permissions to use video consultation.');
+          setShowPermissionModal(true);
+        } else if (error.name === 'NotFoundError') {
+          setMediaPermissionError('No camera or microphone found. Please connect a camera and microphone to use video consultation.');
+          toast.error('No camera or microphone detected');
+        } else if (error.name === 'NotReadableError') {
+          setMediaPermissionError('Camera or microphone is already in use by another application.');
+          toast.error('Camera/microphone in use by another app');
+        } else {
+          setMediaPermissionError('Unable to access camera and microphone. Please check your device settings.');
+          toast.error('Unable to access camera/microphone');
+        }
       }
     };
 
@@ -104,6 +123,11 @@ export function VideoConsultation() {
 
     if (!isConnectedToSupabase) {
       toast.error('Unable to connect to server');
+      return;
+    }
+
+    if (mediaPermissionError) {
+      setShowPermissionModal(true);
       return;
     }
 
@@ -160,6 +184,33 @@ export function VideoConsultation() {
     }
   };
 
+  const retryMediaAccess = async () => {
+    setMediaPermissionError(null);
+    setShowPermissionModal(false);
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
+      setLocalStream(stream);
+      setMediaPermissionError(null);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      toast.success('Camera and microphone access granted!');
+    } catch (error: any) {
+      console.error('Error accessing media devices:', error);
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        setMediaPermissionError('Camera and microphone access denied. Please allow permissions to use video consultation.');
+        setShowPermissionModal(true);
+      } else {
+        setMediaPermissionError('Unable to access camera and microphone. Please check your device settings.');
+        toast.error('Unable to access camera/microphone');
+      }
+    }
+  };
+
   const personalities = [
     { id: 'supportive', name: 'Supportive & Caring', description: 'Empathetic and understanding' },
     { id: 'professional', name: 'Professional', description: 'Clinical and structured approach' },
@@ -205,6 +256,32 @@ export function VideoConsultation() {
               <p className="text-sm text-red-700 dark:text-red-400">
                 Video consultation requires a stable internet connection
               </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Media Permission Error */}
+      {mediaPermissionError && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4"
+        >
+          <div className="flex items-start space-x-3">
+            <Shield className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-1" />
+            <div className="flex-1">
+              <p className="font-medium text-orange-800 dark:text-orange-300">Camera & Microphone Access Required</p>
+              <p className="text-sm text-orange-700 dark:text-orange-400 mb-3">
+                {mediaPermissionError}
+              </p>
+              <button
+                onClick={retryMediaAccess}
+                className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                <span>Try Again</span>
+              </button>
             </div>
           </div>
         </motion.div>
@@ -266,17 +343,25 @@ export function VideoConsultation() {
 
             {/* Local Video Preview */}
             <div className="absolute bottom-4 right-4 w-32 h-24 bg-gray-900 rounded-lg overflow-hidden border-2 border-white/20">
-              <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                className={`w-full h-full object-cover ${!isVideoEnabled ? 'hidden' : ''}`}
-              />
-              {!isVideoEnabled && (
+              {mediaPermissionError ? (
                 <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                  <VideoOff className="h-6 w-6 text-gray-400" />
+                  <Shield className="h-6 w-6 text-gray-400" />
                 </div>
+              ) : (
+                <>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    className={`w-full h-full object-cover ${!isVideoEnabled ? 'hidden' : ''}`}
+                  />
+                  {!isVideoEnabled && (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                      <VideoOff className="h-6 w-6 text-gray-400" />
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -305,24 +390,30 @@ export function VideoConsultation() {
           <div className="flex items-center justify-center space-x-4 mt-6">
             <button
               onClick={toggleVideo}
+              disabled={!!mediaPermissionError}
               className={`p-3 rounded-full transition-all duration-200 ${
-                isVideoEnabled
+                mediaPermissionError
+                  ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                  : isVideoEnabled
                   ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                   : 'bg-red-500 text-white hover:bg-red-600'
               }`}
-              title={isVideoEnabled ? 'Turn off camera' : 'Turn on camera'}
+              title={mediaPermissionError ? 'Camera access required' : isVideoEnabled ? 'Turn off camera' : 'Turn on camera'}
             >
               {isVideoEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
             </button>
 
             <button
               onClick={toggleAudio}
+              disabled={!!mediaPermissionError}
               className={`p-3 rounded-full transition-all duration-200 ${
-                isAudioEnabled
+                mediaPermissionError
+                  ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                  : isAudioEnabled
                   ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                   : 'bg-red-500 text-white hover:bg-red-600'
               }`}
-              title={isAudioEnabled ? 'Mute microphone' : 'Unmute microphone'}
+              title={mediaPermissionError ? 'Microphone access required' : isAudioEnabled ? 'Mute microphone' : 'Unmute microphone'}
             >
               {isAudioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
             </button>
@@ -339,7 +430,7 @@ export function VideoConsultation() {
             ) : (
               <button
                 onClick={handleStartSession}
-                disabled={isLoading || !isOnline || !isConnectedToSupabase}
+                disabled={isLoading || !isOnline || !isConnectedToSupabase || !!mediaPermissionError}
                 className="bg-gradient-to-r from-purple-600 to-blue-600 hover:shadow-lg text-white px-6 py-3 rounded-full transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Phone className="h-5 w-5" />
@@ -469,6 +560,53 @@ export function VideoConsultation() {
           </div>
         </motion.div>
       )}
+
+      {/* Permission Modal */}
+      <Modal
+        isOpen={showPermissionModal}
+        onRequestClose={() => setShowPermissionModal(false)}
+        className="fixed inset-0 flex items-center justify-center z-50"
+        overlayClassName="fixed inset-0 bg-black bg-opacity-50 z-40"
+        ariaHideApp={false}
+      >
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 max-w-md w-full shadow-xl">
+          <div className="text-center mb-6">
+            <Shield className="h-16 w-16 text-orange-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">Camera & Microphone Access Required</h2>
+            <p className="text-gray-700 dark:text-gray-300">
+              To use video consultation, please allow access to your camera and microphone.
+            </p>
+          </div>
+          
+          <div className="space-y-4 mb-6">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">How to enable permissions:</h3>
+              <ol className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                <li>1. Look for the camera/microphone icon in your browser's address bar</li>
+                <li>2. Click on it and select "Allow"</li>
+                <li>3. Or go to your browser settings and enable camera/microphone for this site</li>
+                <li>4. Refresh the page if needed</li>
+              </ol>
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-3">
+            <button
+              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center space-x-2"
+              onClick={retryMediaAccess}
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>Try Again</span>
+            </button>
+            <button
+              className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg font-semibold"
+              onClick={() => setShowPermissionModal(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Limit Modal */}
       <Modal
