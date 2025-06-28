@@ -15,8 +15,8 @@ export const STRIPE_PRODUCTS: StripeProduct[] = [
     name: 'MindPal Pro',
     description: 'Advanced AI personality customization, Extended mood analytics and insights, Priority support and early access to features, Family sharing and parental reports',
     priceId: 'price_1Rf3vbP9u4ZhsDFE4NWkQWdQ', // Your actual one-time payment price ID
-    price: 1.00,
-    currency: 'USD',
+    price: 1,
+    currency: 'INR', // Changed to Indian Rupees
     mode: 'payment' // Changed to 'payment' for one-time payment
   }
 ];

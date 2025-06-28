@@ -36,7 +36,7 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SaEOlO
       setProcessingPlan(productId);
       await createCheckoutSession(productId);
     } catch (error) {
-      console.error('Subscription error:', error);
+      console.error('Payment error:', error);
       toast.error('Failed to start payment process');
     } finally {
       setProcessingPlan(null);
@@ -44,7 +44,7 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SaEOlO
   };
 
   const formatPrice = (price: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: currency,
       minimumFractionDigits: 0,
