@@ -8,16 +8,16 @@ export interface StripeProduct {
   mode: 'payment' | 'subscription';
 }
 
-// Updated with proper minimum charge amount for Stripe
+// Updated for recurring subscription payment
 export const STRIPE_PRODUCTS: StripeProduct[] = [
   {
     id: 'prod_SaEOlOgANKu2QM',
     name: 'MindPal Pro',
     description: 'Advanced AI personality customization, Extended mood analytics and insights, Priority support and early access to features, Family sharing and parental reports',
-    priceId: 'price_1Rf4SXP9u4ZhsDFEi5ZIUSUR', // Updated price ID
-    price: 199, // Changed from ₹1 to ₹199 to meet Stripe's minimum charge requirement
+    priceId: 'price_1Rf4SXP9u4ZhsDFEi5ZIUSUR', // Updated price ID for recurring payment
+    price: 199, // ₹199/month recurring subscription
     currency: 'INR',
-    mode: 'payment' // One-time payment
+    mode: 'subscription' // Changed to subscription for recurring payment
   }
 ];
 
