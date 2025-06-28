@@ -8,7 +8,8 @@ import {
   Shield, 
   Star,
   CreditCard,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import { useStripe } from '../../hooks/useStripe';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
@@ -20,7 +21,7 @@ interface SubscriptionModalProps {
   selectedPlan?: string;
 }
 
-export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SZo2DUxaaXJyE6' }: SubscriptionModalProps) {
+export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_demo_mindpal_pro' }: SubscriptionModalProps) {
   const { createCheckoutSession, loading, isProUser } = useStripe();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
 
@@ -97,6 +98,19 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SZo2DU
             <p className="text-gray-600 dark:text-gray-300">
               Unlock the full potential of MindPal with our Pro subscription
             </p>
+          </div>
+
+          {/* Stripe Configuration Warning */}
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 mb-6">
+            <div className="flex items-start space-x-3">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-1" />
+              <div>
+                <p className="font-medium text-yellow-800 dark:text-yellow-300">Stripe Configuration Required</p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
+                  The Stripe product 'prod_SZo2DUxaaXJyE6' was not found. Please create this product in your Stripe dashboard with the correct price ID, or update the configuration in stripe-config.ts.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Plan Card */}

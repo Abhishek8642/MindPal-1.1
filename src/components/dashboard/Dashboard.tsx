@@ -63,56 +63,69 @@ export function Dashboard() {
     }
   }, [searchParams]);
 
-  // REMOVED: loadCurrentSubscription call to prevent resource exhaustion
-
   const loadStats = useCallback(async () => {
     if (!user) return;
+
+    if (!isConnectedToSupabase) {
+      setLoading(false);
+      setError('No connection to server');
+      return;
+    }
 
     try {
       setError(null);
       
-      // Get task stats
-      const { data: taskData, error: taskError } = await supabase
-        .from('tasks')
-        .select('completed')
-        .eq('user_id', user.id);
+      // Get task stats with retry
+      const taskData = await withRetry(async () => {
+        const { data, error } = await supabase
+          .from('tasks')
+          .select('completed')
+          .eq('user_id', user.id);
 
-      if (taskError) {
-        const isJWTError = await handleSupabaseError(taskError);
-        if (!isJWTError) {
-          console.warn('Error loading tasks:', taskError);
+        if (error) {
+          const isJWTError = await handleSupabaseError(error);
+          if (!isJWTError) throw error;
+          return null;
         }
-      }
 
-      // Get today's mood
+        return data;
+      });
+
+      // Get today's mood with retry
       const today = new Date().toISOString().split('T')[0];
-      const { data: moodData, error: moodError } = await supabase
-        .from('mood_entries')
-        .select('mood')
-        .eq('user_id', user.id)
-        .gte('created_at', today)
-        .order('created_at', { ascending: false })
-        .limit(1);
+      const moodData = await withRetry(async () => {
+        const { data, error } = await supabase
+          .from('mood_entries')
+          .select('mood')
+          .eq('user_id', user.id)
+          .gte('created_at', today)
+          .order('created_at', { ascending: false })
+          .limit(1);
 
-      if (moodError) {
-        const isJWTError = await handleSupabaseError(moodError);
-        if (!isJWTError) {
-          console.warn('Error loading mood:', moodError);
+        if (error) {
+          const isJWTError = await handleSupabaseError(error);
+          if (!isJWTError) throw error;
+          return null;
         }
-      }
 
-      // Get voice sessions count
-      const { data: voiceData, error: voiceError } = await supabase
-        .from('chat_sessions')
-        .select('id')
-        .eq('user_id', user.id);
+        return data;
+      });
 
-      if (voiceError) {
-        const isJWTError = await handleSupabaseError(voiceError);
-        if (!isJWTError) {
-          console.warn('Error loading voice sessions:', voiceError);
+      // Get voice sessions count with retry
+      const voiceData = await withRetry(async () => {
+        const { data, error } = await supabase
+          .from('chat_sessions')
+          .select('id')
+          .eq('user_id', user.id);
+
+        if (error) {
+          const isJWTError = await handleSupabaseError(error);
+          if (!isJWTError) throw error;
+          return null;
         }
-      }
+
+        return data;
+      });
 
       setStats({
         totalTasks: taskData?.length || 0,
@@ -126,7 +139,7 @@ export function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user, handleSupabaseError]);
+  }, [user, handleSupabaseError, withRetry, isConnectedToSupabase]);
 
   useEffect(() => {
     if (user) {
@@ -259,11 +272,11 @@ export function Dashboard() {
         </p>
       </motion.div>
 
-      {/* Subscription Banner for Free Users - ALWAYS SHOW since isProUser() always returns false */}
+      {/* Subscription Banner - Always show since subscription loading is disabled */}
       <SubscriptionBanner onUpgrade={() => setShowSubscriptionModal(true)} />
 
       {/* Connection Error Banner */}
-      {(!isOnline || error) && (
+      {(!isOnline || !isConnectedToSupabase || error) && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -278,11 +291,15 @@ export function Dashboard() {
               )}
               <div>
                 <p className="font-medium text-yellow-800 dark:text-yellow-300">
-                  {!isOnline ? 'No Internet Connection' : 'Data Loading Issues'}
+                  {!isOnline ? 'No Internet Connection' : 
+                   !isConnectedToSupabase ? 'Server Connection Issues' : 
+                   'Data Loading Issues'}
                 </p>
                 <p className="text-sm text-yellow-700 dark:text-yellow-400">
                   {!isOnline 
                     ? 'Some features may not work properly without internet access.'
+                    : !isConnectedToSupabase
+                    ? 'Cannot connect to Supabase server. Please check your configuration.'
                     : error || 'Some data may not be up to date. The app will continue to work normally.'
                   }
                 </p>
@@ -406,7 +423,8 @@ export function Dashboard() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => handleQuickAction('schedule-mood-reminder')}
-            className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white p-4 rounded-xl hover:shadow-lg transition-all duration-200 text-left flex items-center space-x-3"
+            disabled={!isConnectedToSupabase}
+            className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white p-4 rounded-xl hover:shadow-lg transition-all duration-200 text-left flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="h-6 w-6" />
             <div>
@@ -419,7 +437,8 @@ export function Dashboard() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => handleQuickAction('schedule-daily-summary')}
-            className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4 rounded-xl hover:shadow-lg transition-all duration-200 text-left flex items-center space-x-3"
+            disabled={!isConnectedToSupabase}
+            className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4 rounded-xl hover:shadow-lg transition-all duration-200 text-left flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="h-6 w-6" />
             <div>
@@ -453,7 +472,7 @@ export function Dashboard() {
       <SubscriptionModal
         isOpen={showSubscriptionModal}
         onClose={() => setShowSubscriptionModal(false)}
-        selectedPlan="prod_SZo2DUxaaXJyE6"
+        selectedPlan="prod_demo_mindpal_pro"
       />
     </div>
   );

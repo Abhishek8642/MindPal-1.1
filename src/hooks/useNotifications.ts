@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
+import { useNetworkStatus } from './useNetworkStatus';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
@@ -15,6 +16,7 @@ interface Notification {
 
 export function useNotifications() {
   const { user, handleSupabaseError } = useAuth();
+  const { isConnectedToSupabase, withRetry } = useNetworkStatus();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [permission, setPermission] = useState<NotificationPermission>('default');
 
@@ -59,6 +61,11 @@ export function useNotifications() {
       return;
     }
 
+    if (!isConnectedToSupabase) {
+      toast.error('Cannot schedule notification - no connection to server');
+      return;
+    }
+
     try {
       // Ensure we have notification permission
       if (permission !== 'granted') {
@@ -66,52 +73,58 @@ export function useNotifications() {
         if (!hasPermission) return;
       }
 
-      const { data, error } = await supabase
-        .from('notifications')
-        .insert([{
-          user_id: user.id,
-          type,
-          title,
-          message,
-          scheduled_for: scheduledFor.toISOString(),
-        }])
-        .select()
-        .single();
+      const data = await withRetry(async () => {
+        const { data, error } = await supabase
+          .from('notifications')
+          .insert([{
+            user_id: user.id,
+            type,
+            title,
+            message,
+            scheduled_for: scheduledFor.toISOString(),
+          }])
+          .select()
+          .single();
 
-      if (error) {
-        const isJWTError = await handleSupabaseError(error);
-        if (!isJWTError) throw error;
-        return;
+        if (error) {
+          const isJWTError = await handleSupabaseError(error);
+          if (!isJWTError) throw error;
+          return null;
+        }
+
+        return data;
+      });
+
+      if (data) {
+        setNotifications(prev => [...prev, data]);
+        
+        // Schedule browser notification
+        const timeUntilNotification = scheduledFor.getTime() - Date.now();
+        
+        if (timeUntilNotification > 0) {
+          setTimeout(() => {
+            if (permission === 'granted') {
+              const notification = new Notification(title, {
+                body: message,
+                icon: '/vite.svg',
+                badge: '/vite.svg',
+                tag: `mindpal-${type}`,
+                requireInteraction: true,
+              });
+
+              notification.onclick = () => {
+                window.focus();
+                notification.close();
+              };
+
+              // Auto close after 10 seconds
+              setTimeout(() => notification.close(), 10000);
+            }
+          }, timeUntilNotification);
+        }
+
+        toast.success(`${title} scheduled successfully!`);
       }
-
-      setNotifications(prev => [...prev, data]);
-      
-      // Schedule browser notification
-      const timeUntilNotification = scheduledFor.getTime() - Date.now();
-      
-      if (timeUntilNotification > 0) {
-        setTimeout(() => {
-          if (permission === 'granted') {
-            const notification = new Notification(title, {
-              body: message,
-              icon: '/vite.svg',
-              badge: '/vite.svg',
-              tag: `mindpal-${type}`,
-              requireInteraction: true,
-            });
-
-            notification.onclick = () => {
-              window.focus();
-              notification.close();
-            };
-
-            // Auto close after 10 seconds
-            setTimeout(() => notification.close(), 10000);
-          }
-        }, timeUntilNotification);
-      }
-
-      toast.success(`${title} scheduled successfully!`);
     } catch (error) {
       console.error('Error scheduling notification:', error);
       toast.error('Failed to schedule notification');
@@ -165,39 +178,50 @@ export function useNotifications() {
   };
 
   const loadNotifications = useCallback(async () => {
-    if (!user) return;
+    if (!user || !isConnectedToSupabase) return;
 
     try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('scheduled_for', { ascending: false });
+      const data = await withRetry(async () => {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('scheduled_for', { ascending: false });
 
-      if (error) {
-        const isJWTError = await handleSupabaseError(error);
-        if (!isJWTError) throw error;
-        return;
-      }
+        if (error) {
+          const isJWTError = await handleSupabaseError(error);
+          if (!isJWTError) throw error;
+          return null;
+        }
+
+        return data;
+      });
 
       setNotifications(data || []);
     } catch (error) {
       console.error('Error loading notifications:', error);
     }
-  }, [user, handleSupabaseError]);
+  }, [user, handleSupabaseError, withRetry, isConnectedToSupabase]);
 
   const deleteNotification = async (notificationId: string) => {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', notificationId);
+    if (!isConnectedToSupabase) {
+      toast.error('Cannot delete notification - no connection to server');
+      return;
+    }
 
-      if (error) {
-        const isJWTError = await handleSupabaseError(error);
-        if (!isJWTError) throw error;
-        return;
-      }
+    try {
+      await withRetry(async () => {
+        const { error } = await supabase
+          .from('notifications')
+          .delete()
+          .eq('id', notificationId);
+
+        if (error) {
+          const isJWTError = await handleSupabaseError(error);
+          if (!isJWTError) throw error;
+          return;
+        }
+      });
 
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
       toast.success('Notification deleted');
@@ -208,10 +232,10 @@ export function useNotifications() {
   };
 
   useEffect(() => {
-    if (user) {
+    if (user && isConnectedToSupabase) {
       loadNotifications();
     }
-  }, [user, loadNotifications]);
+  }, [user, loadNotifications, isConnectedToSupabase]);
 
   return {
     notifications,
