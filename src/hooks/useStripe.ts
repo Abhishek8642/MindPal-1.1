@@ -26,15 +26,20 @@ export function useStripe() {
   const loadCurrentSubscription = useCallback(async () => {
     if (!user) return;
 
+    // Temporarily disable subscription loading to prevent resource exhaustion
+    console.log('Stripe subscription loading disabled - database view not configured');
+    setCurrentSubscription(null);
+    return;
+
+    /* 
+    // This code is disabled until the stripe_user_subscriptions view is properly created
     try {
-      // Try to load subscription data, but don't fail if the view doesn't exist
       const { data, error } = await supabase
         .from('stripe_user_subscriptions')
         .select('*')
         .maybeSingle();
 
       if (error) {
-        // If the view doesn't exist, just log it and continue
         if (error.code === '42P01') {
           console.warn('Stripe subscription view not found - subscription features disabled');
           setCurrentSubscription(null);
@@ -54,6 +59,7 @@ export function useStripe() {
       console.warn('Error loading subscription:', error);
       setCurrentSubscription(null);
     }
+    */
   }, [user, handleSupabaseError]);
 
   const createCheckoutSession = useCallback(async (productId: string) => {
@@ -162,32 +168,26 @@ export function useStripe() {
   }, [user, isOnline]);
 
   const isProUser = useCallback(() => {
-    return currentSubscription?.subscription_status === 'active' && 
-           currentSubscription?.price_id === STRIPE_PRODUCTS.find(p => p.id === 'prod_SZo2DUxaaXJyE6')?.priceId;
-  }, [currentSubscription]);
+    // Since subscription loading is disabled, default to false
+    return false;
+  }, []);
 
   const getSubscriptionStatus = useCallback(() => {
-    if (!currentSubscription) return 'free';
-    
-    if (currentSubscription.subscription_status === 'active') {
-      const product = getProductByPriceId(currentSubscription.price_id || '');
-      return product?.name || 'active';
-    }
-    
-    return currentSubscription.subscription_status || 'free';
-  }, [currentSubscription]);
+    // Since subscription loading is disabled, default to free
+    return 'free';
+  }, []);
 
   const getCurrentPlan = useCallback(() => {
-    if (!currentSubscription?.price_id) return null;
-    return getProductByPriceId(currentSubscription.price_id);
-  }, [currentSubscription]);
+    // Since subscription loading is disabled, return null
+    return null;
+  }, []);
 
   useEffect(() => {
     if (user) {
-      // Load subscription data but don't block the app if it fails
-      loadCurrentSubscription().catch(console.warn);
+      // Don't load subscription data to prevent resource exhaustion
+      console.log('Subscription loading skipped - database not configured');
     }
-  }, [user, loadCurrentSubscription]);
+  }, [user]);
 
   return {
     loading,
