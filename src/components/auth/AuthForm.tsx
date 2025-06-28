@@ -81,10 +81,10 @@ export function AuthForm() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Animated Background */}
       <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width=%2260%22%20height=%2260%22%20viewBox=%220%200%2060%2060%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg%20fill=%22none%22%20fill-rule=%22evenodd%22%3E%3Cg%20fill=%22%239C92AC%22%20fill-opacity=%220.1%22%3E%3Ccircle%20cx=%2230%22%20cy=%2230%22%20r=%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] animate-pulse"></div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width=%2260%22%20height=%2260%22%20viewBox=%220%200%2060%2060%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg%20fill=%22none%22%20fill-rule=%22evenodd%22%3E%3Cg%20fill=%22%239C92AC%22%20fill-opacity=%220.05%22%3E%3Ccircle%20cx=%2230%22%20cy=%2230%22%20r=%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] animate-pulse"></div>
         
         {/* Floating Particles */}
         {Array.from({ length: 20 }).map((_, i) => (
@@ -93,9 +93,9 @@ export function AuthForm() {
         
         {/* Mouse Follower Gradient */}
         <motion.div
-          className="absolute w-96 h-96 rounded-full opacity-20"
+          className="absolute w-96 h-96 rounded-full opacity-10"
           style={{
-            background: 'radial-gradient(circle, rgba(168,85,247,0.4) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(168,85,247,0.3) 0%, transparent 70%)',
             left: mousePosition.x - 192,
             top: mousePosition.y - 192,
           }}
@@ -103,7 +103,7 @@ export function AuthForm() {
             scale: [1, 1.2, 1],
           }}
           transition={{
-            duration: 2,
+            duration: 3,
             repeat: Infinity,
             ease: "easeInOut"
           }}
@@ -134,8 +134,8 @@ export function AuthForm() {
                 whileHover={{ scale: 1.1, rotate: 360 }}
                 transition={{ duration: 0.8 }}
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur-lg opacity-75 animate-pulse"></div>
-                <div className="relative bg-gradient-to-r from-purple-600 to-pink-600 p-4 rounded-2xl">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl blur-lg opacity-75 animate-pulse"></div>
+                <div className="relative bg-gradient-to-r from-purple-600 to-blue-600 p-4 rounded-2xl">
                   <Brain className="h-10 w-10 text-white" />
                 </div>
                 <motion.div
@@ -157,7 +157,7 @@ export function AuthForm() {
               </motion.h1>
               
               <motion.p
-                className="text-white/80 text-sm leading-relaxed"
+                className="text-white/60 text-sm leading-relaxed"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.5 }}
@@ -186,7 +186,7 @@ export function AuthForm() {
                   Email Address
                 </label>
                 <div className="relative group">
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/60 z-10" />
                   <input
                     type="email"
@@ -208,7 +208,7 @@ export function AuthForm() {
                   Password
                 </label>
                 <div className="relative group">
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/60 z-10" />
                   <input
                     type={showPassword ? 'text' : 'password'}
@@ -239,9 +239,9 @@ export function AuthForm() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-xl"></div>
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse"></div>
-                <div className="relative bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 rounded-xl"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse"></div>
+                <div className="relative bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2">
                   <AnimatePresence mode="wait">
                     {loading ? (
                       <motion.div
@@ -289,7 +289,7 @@ export function AuthForm() {
             >
               <motion.button
                 onClick={() => setIsSignUp(!isSignUp)}
-                className="text-white/80 hover:text-white transition-colors duration-200 relative group"
+                className="text-white/60 hover:text-white transition-colors duration-200 relative group"
                 whileHover={{ scale: 1.05 }}
               >
                 <span className="relative z-10">
@@ -298,7 +298,7 @@ export function AuthForm() {
                     : "Don't have an account? Sign up"}
                 </span>
                 <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                   layoutId="toggleHover"
                 />
               </motion.button>
@@ -310,7 +310,7 @@ export function AuthForm() {
                 animate={{ rotate: 360 }}
                 transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
               >
-                <Star className="h-8 w-8 text-yellow-400/30" />
+                <Star className="h-8 w-8 text-purple-400/30" />
               </motion.div>
             </div>
             <div className="absolute -bottom-4 -right-4">
