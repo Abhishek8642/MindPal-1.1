@@ -23,7 +23,7 @@ import toast from 'react-hot-toast';
 export function Settings() {
   const { user } = useAuth();
   const { settings, updateSettings, loading } = useSettings();
-  const { currentSubscription, isProUser, createPortalSession, loadCurrentSubscription, getCurrentPlan } = useStripe();
+  const { isProUser, createPortalSession } = useStripe();
   const [activeTab, setActiveTab] = React.useState('profile');
   const [showSubscriptionModal, setShowSubscriptionModal] = React.useState(false);
   const [profile, setProfile] = React.useState({
@@ -33,10 +33,7 @@ export function Settings() {
   });
   const [profileLoading, setProfileLoading] = React.useState(false);
 
-  // Load subscription data on component mount
-  React.useEffect(() => {
-    loadCurrentSubscription();
-  }, [loadCurrentSubscription]);
+  // REMOVED: loadCurrentSubscription call to prevent resource exhaustion
 
   // Load profile data on component mount
   React.useEffect(() => {
@@ -137,14 +134,8 @@ export function Settings() {
   };
 
   const formatSubscriptionStatus = () => {
-    if (!currentSubscription) return 'Free Plan';
-    
-    if (currentSubscription.subscription_status === 'active') {
-      const plan = getCurrentPlan();
-      return plan ? `${plan.name}` : 'Pro Plan';
-    }
-    
-    return 'Expired';
+    // Since subscription loading is disabled, always show Free Plan
+    return 'Free Plan';
   };
 
   const tabs = [
@@ -466,99 +457,56 @@ export function Settings() {
                       {formatSubscriptionStatus()}
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
-                      {isProUser() ? 'You have access to all premium features' : 'Upgrade to unlock premium features'}
+                      Upgrade to unlock premium features
                     </p>
                   </div>
                 </div>
-                
-                {isProUser() && (
-                  <div className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-3 py-1 rounded-full text-sm font-medium">
-                    Active
-                  </div>
-                )}
               </div>
 
-              {!isProUser() && (
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-center space-x-2 text-sm">
-                    <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                    <span className="text-gray-700 dark:text-gray-300">Advanced AI personality customization</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                    <span className="text-gray-700 dark:text-gray-300">Extended mood analytics and insights</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                    <span className="text-gray-700 dark:text-gray-300">Priority support and early access to features</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                    <span className="text-gray-700 dark:text-gray-300">Family sharing and parental reports</span>
-                  </div>
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center space-x-2 text-sm">
+                  <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                  <span className="text-gray-700 dark:text-gray-300">Advanced AI personality customization</span>
                 </div>
-              )}
+                <div className="flex items-center space-x-2 text-sm">
+                  <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                  <span className="text-gray-700 dark:text-gray-300">Extended mood analytics and insights</span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm">
+                  <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                  <span className="text-gray-700 dark:text-gray-300">Priority support and early access to features</span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm">
+                  <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                  <span className="text-gray-700 dark:text-gray-300">Family sharing and parental reports</span>
+                </div>
+              </div>
 
               <div className="flex space-x-3">
-                {!isProUser() ? (
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setShowSubscriptionModal(true)}
-                    className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2"
-                  >
-                    <Crown className="h-4 w-4" />
-                    <span>Upgrade to Pro - ₹199/month</span>
-                  </motion.button>
-                ) : (
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleManageBilling}
-                    className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-3 px-6 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 flex items-center justify-center space-x-2"
-                  >
-                    <CreditCard className="h-4 w-4" />
-                    <span>Manage Billing</span>
-                    <ExternalLink className="h-3 w-3" />
-                  </motion.button>
-                )}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setShowSubscriptionModal(true)}
+                  className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2"
+                >
+                  <Crown className="h-4 w-4" />
+                  <span>Upgrade to Pro - ₹199/month</span>
+                </motion.button>
               </div>
             </div>
 
-            {/* Billing Information */}
-            {currentSubscription && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Billing Information</h4>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Plan:</span>
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {getCurrentPlan()?.name || 'Pro'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Status:</span>
-                    <span className={`font-medium ${
-                      currentSubscription.subscription_status === 'active'
-                        ? 'text-green-600 dark:text-green-400' 
-                        : 'text-red-600 dark:text-red-400'
-                    }`}>
-                      {currentSubscription.subscription_status === 'active' ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                  {currentSubscription.current_period_end && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        {currentSubscription.subscription_status === 'active' ? 'Next billing:' : 'Expired:'}
-                      </span>
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {new Date(currentSubscription.current_period_end * 1000).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                </div>
+            {/* Payment Testing Info */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+              <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">💳 Payment Testing</h4>
+              <p className="text-sm text-blue-800 dark:text-blue-400 mb-3">
+                To test payments, click "Upgrade to Pro" above. The checkout will redirect to Stripe's secure payment page.
+              </p>
+              <div className="text-xs text-blue-700 dark:text-blue-400">
+                <p><strong>Test Card:</strong> 4242 4242 4242 4242</p>
+                <p><strong>Expiry:</strong> Any future date</p>
+                <p><strong>CVC:</strong> Any 3 digits</p>
               </div>
-            )}
+            </div>
           </div>
         );
 

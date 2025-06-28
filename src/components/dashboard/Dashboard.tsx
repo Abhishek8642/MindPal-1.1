@@ -28,7 +28,7 @@ import toast from 'react-hot-toast';
 export function Dashboard() {
   const { user, handleSupabaseError } = useAuth();
   const { isOnline, isConnectedToSupabase, withRetry } = useNetworkStatus();
-  const { isProUser, loadCurrentSubscription } = useStripe();
+  const { isProUser } = useStripe();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { 
@@ -54,8 +54,6 @@ export function Dashboard() {
     
     if (success === 'true') {
       toast.success('Payment successful! Welcome to MindPal Pro! 🎉');
-      // Reload subscription data
-      loadCurrentSubscription().catch(console.warn);
       // Clear URL params
       window.history.replaceState({}, '', '/dashboard');
     } else if (canceled === 'true') {
@@ -63,12 +61,9 @@ export function Dashboard() {
       // Clear URL params
       window.history.replaceState({}, '', '/dashboard');
     }
-  }, [searchParams, loadCurrentSubscription]);
+  }, [searchParams]);
 
-  // Load subscription status
-  useEffect(() => {
-    loadCurrentSubscription().catch(console.warn);
-  }, [loadCurrentSubscription]);
+  // REMOVED: loadCurrentSubscription call to prevent resource exhaustion
 
   const loadStats = useCallback(async () => {
     if (!user) return;
@@ -264,10 +259,8 @@ export function Dashboard() {
         </p>
       </motion.div>
 
-      {/* Subscription Banner for Free Users */}
-      {!isProUser() && !error && (
-        <SubscriptionBanner onUpgrade={() => setShowSubscriptionModal(true)} />
-      )}
+      {/* Subscription Banner for Free Users - ALWAYS SHOW since isProUser() always returns false */}
+      <SubscriptionBanner onUpgrade={() => setShowSubscriptionModal(true)} />
 
       {/* Connection Error Banner */}
       {(!isOnline || error) && (
