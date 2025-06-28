@@ -9,7 +9,7 @@ interface SubscriptionBannerProps {
 }
 
 export function SubscriptionBanner({ onUpgrade, className = '' }: SubscriptionBannerProps) {
-  const proProduct = STRIPE_PRODUCTS.find(p => p.id === 'prod_demo_mindpal_pro');
+  const proProduct = STRIPE_PRODUCTS.find(p => p.id === 'prod_SaEOlOgANKu2QM');
   
   return (
     <motion.div
@@ -23,9 +23,9 @@ export function SubscriptionBanner({ onUpgrade, className = '' }: SubscriptionBa
             <Crown className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="text-lg font-bold mb-1">Upgrade to MindPal Pro</h3>
+            <h3 className="text-lg font-bold mb-1">Subscribe to MindPal Pro</h3>
             <p className="text-white/90 text-sm">
-              Unlock unlimited features for just ₹{proProduct?.price || 199}/month
+              Monthly subscription for just ₹{proProduct?.price || 199}/month
             </p>
           </div>
         </div>
@@ -37,7 +37,7 @@ export function SubscriptionBanner({ onUpgrade, className = '' }: SubscriptionBa
           className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center space-x-2 border border-white/20"
         >
           <Sparkles className="h-4 w-4" />
-          <span>Upgrade Now</span>
+          <span>Subscribe Now</span>
           <ArrowRight className="h-4 w-4" />
         </motion.button>
       </div>

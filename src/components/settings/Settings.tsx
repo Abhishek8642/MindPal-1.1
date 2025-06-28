@@ -457,7 +457,7 @@ export function Settings() {
                       {formatSubscriptionStatus()}
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Upgrade to unlock premium features
+                      Subscribe to unlock premium features
                     </p>
                   </div>
                 </div>
@@ -490,7 +490,7 @@ export function Settings() {
                   className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2"
                 >
                   <Crown className="h-4 w-4" />
-                  <span>Upgrade to Pro - ₹199/month</span>
+                  <span>Subscribe to Pro - ₹199/month</span>
                 </motion.button>
               </div>
             </div>
@@ -499,7 +499,7 @@ export function Settings() {
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
               <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">💳 Payment Testing</h4>
               <p className="text-sm text-blue-800 dark:text-blue-400 mb-3">
-                To test payments, click "Upgrade to Pro" above. The checkout will redirect to Stripe's secure payment page.
+                To test the subscription, click "Subscribe to Pro" above. The checkout will redirect to Stripe's secure payment page.
               </p>
               <div className="text-xs text-blue-700 dark:text-blue-400">
                 <p><strong>Test Card:</strong> 4242 4242 4242 4242</p>
@@ -591,7 +591,7 @@ export function Settings() {
       <SubscriptionModal
         isOpen={showSubscriptionModal}
         onClose={() => setShowSubscriptionModal(false)}
-        selectedPlan="prod_demo_mindpal_pro"
+        selectedPlan="prod_SaEOlOgANKu2QM"
       />
     </div>
   );
