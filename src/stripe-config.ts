@@ -8,17 +8,18 @@ export interface StripeProduct {
   mode: 'payment' | 'subscription';
 }
 
-// Updated for recurring subscription payment
+// Empty products array - add your products here when ready
 export const STRIPE_PRODUCTS: StripeProduct[] = [
-  {
-    id: 'prod_SaEOlOgANKu2QM',
-    name: 'MindPal Pro',
-    description: 'Advanced AI personality customization, Extended mood analytics and insights, Priority support and early access to features, Family sharing and parental reports',
-    priceId: 'price_1Rf4SXP9u4ZhsDFEi5ZIUSUR', // Updated price ID for recurring payment
-    price: 199, // ₹199/month recurring subscription
-    currency: 'INR',
-    mode: 'subscription' // Changed to subscription for recurring payment
-  }
+  // Example product structure:
+  // {
+  //   id: 'your_product_id',
+  //   name: 'MindPal Pro',
+  //   description: 'Advanced AI personality customization, Extended mood analytics and insights, Priority support and early access to features, Family sharing and parental reports',
+  //   priceId: 'your_price_id',
+  //   price: 199,
+  //   currency: 'INR',
+  //   mode: 'subscription'
+  // }
 ];
 
 export const getProductById = (id: string): StripeProduct | undefined => {
