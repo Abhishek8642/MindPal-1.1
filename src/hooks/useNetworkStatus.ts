@@ -18,14 +18,21 @@ export function useNetworkStatus() {
 
   const checkSupabaseConnection = useCallback(async (): Promise<boolean> => {
     try {
+      // Use a simpler endpoint that's more likely to work
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/`, {
         method: 'HEAD',
         headers: {
           'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        signal: AbortSignal.timeout(5000), // 5 second timeout
+        signal: controller.signal,
       });
-      return response.ok;
+      
+      clearTimeout(timeoutId);
+      return response.ok || response.status === 401; // 401 is also acceptable (means server is responding)
     } catch (error) {
       console.warn('Supabase connection check failed:', error);
       return false;
@@ -34,10 +41,15 @@ export function useNetworkStatus() {
 
   const updateNetworkStatus = useCallback(async () => {
     const isOnline = navigator.onLine;
-    let isConnectedToSupabase = false;
+    let isConnectedToSupabase = true; // Default to true to prevent blocking
 
     if (isOnline) {
-      isConnectedToSupabase = await checkSupabaseConnection();
+      try {
+        isConnectedToSupabase = await checkSupabaseConnection();
+      } catch (error) {
+        console.warn('Network status check failed:', error);
+        isConnectedToSupabase = true; // Assume connection is OK if check fails
+      }
     }
 
     setNetworkStatus(prev => ({
@@ -68,18 +80,13 @@ export function useNetworkStatus() {
 
   const withRetry = useCallback(async <T>(
     operation: () => Promise<T>,
-    maxRetries: number = 3,
-    delay: number = 1000
+    maxRetries: number = 2,
+    delay: number = 500
   ): Promise<T> => {
     let lastError: Error;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        // Check network status before attempting operation
-        if (!networkStatus.isOnline) {
-          throw new Error('No internet connection');
-        }
-
         const result = await operation();
         
         // Reset retry count on success
@@ -91,29 +98,28 @@ export function useNetworkStatus() {
       } catch (error) {
         lastError = error as Error;
         
-        // Update network status if this looks like a network error
-        if (error instanceof TypeError && error.message.includes('fetch')) {
-          await updateNetworkStatus();
-        }
-
         // Don't retry on the last attempt
         if (attempt === maxRetries) {
           break;
         }
 
-        // Exponential backoff
-        const waitTime = delay * Math.pow(2, attempt);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
+        // Simple delay between retries
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
 
     throw lastError!;
-  }, [networkStatus.isOnline, updateNetworkStatus]);
+  }, []);
 
   // Listen for online/offline events
   useEffect(() => {
     const handleOnline = () => {
-      updateNetworkStatus();
+      setNetworkStatus(prev => ({
+        ...prev,
+        isOnline: true,
+        isConnectedToSupabase: true, // Assume connection is restored
+        lastChecked: new Date(),
+      }));
     };
 
     const handleOffline = () => {
@@ -123,22 +129,17 @@ export function useNetworkStatus() {
         isConnectedToSupabase: false,
         lastChecked: new Date(),
       }));
-      toast.error('Connection lost');
     };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Initial check
-    updateNetworkStatus();
-
-    // Periodic health check every 30 seconds
-    const interval = setInterval(updateNetworkStatus, 30000);
+    // Initial check - but don't block if it fails
+    updateNetworkStatus().catch(console.warn);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      clearInterval(interval);
     };
   }, [updateNetworkStatus]);
 

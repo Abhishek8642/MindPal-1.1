@@ -27,26 +27,34 @@ export function useStripe() {
     if (!user) return;
 
     try {
-      const data = await withRetry(async () => {
-        const { data, error } = await supabase
-          .from('stripe_user_subscriptions')
-          .select('*')
-          .maybeSingle();
+      // Try to load subscription data, but don't fail if the view doesn't exist
+      const { data, error } = await supabase
+        .from('stripe_user_subscriptions')
+        .select('*')
+        .maybeSingle();
 
-        if (error) {
-          const isJWTError = await handleSupabaseError(error);
-          if (!isJWTError) throw error;
-          return null;
+      if (error) {
+        // If the view doesn't exist, just log it and continue
+        if (error.code === '42P01') {
+          console.warn('Stripe subscription view not found - subscription features disabled');
+          setCurrentSubscription(null);
+          return;
         }
-
-        return data;
-      });
+        
+        const isJWTError = await handleSupabaseError(error);
+        if (!isJWTError) {
+          console.warn('Error loading subscription:', error);
+        }
+        setCurrentSubscription(null);
+        return;
+      }
 
       setCurrentSubscription(data);
     } catch (error) {
-      console.error('Error loading subscription:', error);
+      console.warn('Error loading subscription:', error);
+      setCurrentSubscription(null);
     }
-  }, [user, withRetry, handleSupabaseError]);
+  }, [user, handleSupabaseError]);
 
   const createCheckoutSession = useCallback(async (productId: string) => {
     if (!user) {
@@ -176,7 +184,8 @@ export function useStripe() {
 
   useEffect(() => {
     if (user) {
-      loadCurrentSubscription();
+      // Load subscription data but don't block the app if it fails
+      loadCurrentSubscription().catch(console.warn);
     }
   }, [user, loadCurrentSubscription]);
 
