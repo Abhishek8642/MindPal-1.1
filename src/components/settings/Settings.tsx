@@ -20,7 +20,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useSettings } from '../../hooks/useSettings';
 import { useStripe } from '../../hooks/useStripe';
 import { SubscriptionModal } from '../subscription/SubscriptionModal';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 
 export function Settings() {
