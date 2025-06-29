@@ -21,14 +21,42 @@ export function useStripe() {
   const { user, handleSupabaseError } = useAuth();
   const { isOnline, withRetry } = useNetworkStatus();
   const [loading, setLoading] = useState(false);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [currentSubscription, setCurrentSubscription] = useState<SubscriptionData | null>(null);
 
-  // COMPLETELY DISABLED - No subscription loading at all
   const loadCurrentSubscription = useCallback(async () => {
-    console.log('Stripe subscription loading completely disabled');
-    setCurrentSubscription(null);
-    return;
-  }, []);
+    if (!user) {
+      setSubscriptionLoading(false);
+      return;
+    }
+
+    try {
+      setSubscriptionLoading(true);
+      
+      const data = await withRetry(async () => {
+        const { data, error } = await supabase
+          .from('stripe_user_subscriptions')
+          .select('*')
+          .maybeSingle();
+
+        if (error) {
+          const isJWTError = await handleSupabaseError(error);
+          if (!isJWTError) throw error;
+          return null;
+        }
+
+        return data;
+      });
+
+      setCurrentSubscription(data);
+    } catch (error) {
+      console.error('Error loading subscription:', error);
+      // Don't show error toast for subscription loading failures
+      setCurrentSubscription(null);
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  }, [user, handleSupabaseError, withRetry]);
 
   const createCheckoutSession = useCallback(async (productId: string) => {
     if (!user) {
@@ -96,35 +124,107 @@ export function useStripe() {
   }, [user, isOnline]);
 
   const createPortalSession = useCallback(async () => {
-    toast.error('Billing portal not available - subscription features disabled');
-    return;
-  }, []);
+    if (!user) {
+      toast.error('Please sign in to manage billing');
+      return;
+    }
 
-  // Always return false since subscription loading is disabled
+    if (!currentSubscription?.customer_id) {
+      toast.error('No active subscription found');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      toast.loading('Opening billing portal...', { id: 'portal' });
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No valid session found');
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-portal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          return_url: `${window.location.origin}/settings`,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create portal session');
+      }
+
+      const { url } = await response.json();
+      
+      if (url) {
+        toast.success('Redirecting to billing portal...', { id: 'portal' });
+        window.location.href = url;
+      } else {
+        throw new Error('No portal URL received');
+      }
+    } catch (error) {
+      console.error('Error creating portal session:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to open billing portal';
+      toast.error(errorMessage, { id: 'portal' });
+    } finally {
+      setLoading(false);
+    }
+  }, [user, currentSubscription]);
+
   const isProUser = useCallback(() => {
-    return false;
-  }, []);
+    if (!currentSubscription) return false;
+    
+    const activeStatuses = ['active', 'trialing'];
+    return activeStatuses.includes(currentSubscription.subscription_status);
+  }, [currentSubscription]);
 
   const getSubscriptionStatus = useCallback(() => {
-    return 'free';
-  }, []);
+    if (!currentSubscription) return 'free';
+    return currentSubscription.subscription_status;
+  }, [currentSubscription]);
 
   const getCurrentPlan = useCallback(() => {
-    return null;
-  }, []);
+    if (!currentSubscription?.price_id) return null;
+    
+    const product = getProductByPriceId(currentSubscription.price_id);
+    return product || null;
+  }, [currentSubscription]);
 
-  // NO useEffect - completely prevent any automatic loading
-  // useEffect removed to prevent any subscription loading attempts
+  const getSubscriptionEndDate = useCallback(() => {
+    if (!currentSubscription?.current_period_end) return null;
+    return new Date(currentSubscription.current_period_end * 1000);
+  }, [currentSubscription]);
+
+  const isSubscriptionCanceling = useCallback(() => {
+    return currentSubscription?.cancel_at_period_end || false;
+  }, [currentSubscription]);
+
+  useEffect(() => {
+    if (user) {
+      loadCurrentSubscription();
+    } else {
+      setCurrentSubscription(null);
+      setSubscriptionLoading(false);
+    }
+  }, [user, loadCurrentSubscription]);
 
   return {
     loading,
-    currentSubscription: null, // Always null
+    subscriptionLoading,
+    currentSubscription,
     createCheckoutSession,
     createPortalSession,
     loadCurrentSubscription,
     isProUser,
     getSubscriptionStatus,
     getCurrentPlan,
+    getSubscriptionEndDate,
+    isSubscriptionCanceling,
     products: STRIPE_PRODUCTS,
   };
 }

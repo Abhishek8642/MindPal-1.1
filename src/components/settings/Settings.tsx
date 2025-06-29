@@ -11,19 +11,30 @@ import {
   Phone,
   Globe,
   CreditCard,
-  ExternalLink
+  ExternalLink,
+  Calendar,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useSettings } from '../../hooks/useSettings';
 import { useStripe } from '../../hooks/useStripe';
 import { SubscriptionModal } from '../subscription/SubscriptionModal';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 export function Settings() {
   const { user } = useAuth();
   const { settings, updateSettings, loading } = useSettings();
-  const { isProUser, createPortalSession } = useStripe();
+  const { 
+    isProUser, 
+    createPortalSession, 
+    currentSubscription, 
+    subscriptionLoading,
+    getCurrentPlan,
+    getSubscriptionEndDate,
+    isSubscriptionCanceling
+  } = useStripe();
   const [activeTab, setActiveTab] = React.useState('profile');
   const [showSubscriptionModal, setShowSubscriptionModal] = React.useState(false);
   const [profile, setProfile] = React.useState({
@@ -32,8 +43,6 @@ export function Settings() {
     timezone: 'UTC',
   });
   const [profileLoading, setProfileLoading] = React.useState(false);
-
-  // REMOVED: loadCurrentSubscription call to prevent resource exhaustion
 
   // Load profile data on component mount
   React.useEffect(() => {
@@ -134,8 +143,39 @@ export function Settings() {
   };
 
   const formatSubscriptionStatus = () => {
-    // Since subscription loading is disabled, always show Free Plan
-    return 'Free Plan';
+    if (subscriptionLoading) return 'Loading...';
+    if (!currentSubscription) return 'Free Plan';
+    
+    const plan = getCurrentPlan();
+    const status = currentSubscription.subscription_status;
+    
+    if (status === 'active') {
+      return plan ? `${plan.name} - Active` : 'Pro Plan - Active';
+    } else if (status === 'trialing') {
+      return plan ? `${plan.name} - Trial` : 'Pro Plan - Trial';
+    } else if (status === 'past_due') {
+      return 'Pro Plan - Payment Due';
+    } else if (status === 'canceled') {
+      return 'Pro Plan - Canceled';
+    } else {
+      return 'Free Plan';
+    }
+  };
+
+  const getSubscriptionDetails = () => {
+    if (!currentSubscription) return null;
+    
+    const endDate = getSubscriptionEndDate();
+    const isCanceling = isSubscriptionCanceling();
+    
+    return {
+      endDate,
+      isCanceling,
+      status: currentSubscription.subscription_status,
+      paymentMethod: currentSubscription.payment_method_brand && currentSubscription.payment_method_last4
+        ? `${currentSubscription.payment_method_brand.toUpperCase()} •••• ${currentSubscription.payment_method_last4}`
+        : null
+    };
   };
 
   const tabs = [
@@ -446,6 +486,8 @@ export function Settings() {
         );
 
       case 'subscription':
+        const subscriptionDetails = getSubscriptionDetails();
+        
         return (
           <div className="space-y-6">
             <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl p-6 border border-purple-100 dark:border-purple-800">
@@ -457,11 +499,53 @@ export function Settings() {
                       {formatSubscriptionStatus()}
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Subscribe to unlock premium features
+                      {isProUser() ? 'You have access to all premium features' : 'Subscribe to unlock premium features'}
                     </p>
                   </div>
                 </div>
+                {isProUser() ? (
+                  <CheckCircle className="h-8 w-8 text-green-500" />
+                ) : (
+                  <XCircle className="h-8 w-8 text-gray-400" />
+                )}
               </div>
+
+              {/* Subscription Details */}
+              {subscriptionDetails && (
+                <div className="space-y-3 mb-6 p-4 bg-white/50 dark:bg-black/20 rounded-lg">
+                  {subscriptionDetails.endDate && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400 flex items-center">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        {subscriptionDetails.isCanceling ? 'Expires on:' : 'Next billing:'}
+                      </span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {subscriptionDetails.endDate.toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {subscriptionDetails.paymentMethod && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400 flex items-center">
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        Payment method:
+                      </span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {subscriptionDetails.paymentMethod}
+                      </span>
+                    </div>
+                  )}
+
+                  {subscriptionDetails.isCanceling && (
+                    <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded-lg p-3">
+                      <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                        ⚠️ Your subscription is set to cancel at the end of the current billing period.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-3 mb-6">
                 <div className="flex items-center space-x-2 text-sm">
@@ -483,15 +567,28 @@ export function Settings() {
               </div>
 
               <div className="flex space-x-3">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setShowSubscriptionModal(true)}
-                  className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2"
-                >
-                  <Crown className="h-4 w-4" />
-                  <span>Subscribe to Pro - ₹199/month</span>
-                </motion.button>
+                {isProUser() ? (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleManageBilling}
+                    className="flex-1 bg-gradient-to-r from-gray-600 to-gray-700 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    <span>Manage Billing</span>
+                    <ExternalLink className="h-4 w-4" />
+                  </motion.button>
+                ) : (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowSubscriptionModal(true)}
+                    className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2"
+                  >
+                    <Crown className="h-4 w-4" />
+                    <span>Subscribe to Pro - ₹199/month</span>
+                  </motion.button>
+                )}
               </div>
             </div>
 
@@ -591,7 +688,7 @@ export function Settings() {
       <SubscriptionModal
         isOpen={showSubscriptionModal}
         onClose={() => setShowSubscriptionModal(false)}
-        selectedPlan="prod_SaEOlOgANKu2QM"
+        selectedPlan="prod_SaPj0MHJuPVFGC"
       />
     </div>
   );

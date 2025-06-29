@@ -9,7 +9,7 @@ interface SubscriptionBannerProps {
 }
 
 export function SubscriptionBanner({ onUpgrade, className = '' }: SubscriptionBannerProps) {
-  const proProduct = STRIPE_PRODUCTS.find(p => p.id === 'prod_SaEOlOgANKu2QM');
+  const proProduct = STRIPE_PRODUCTS.find(p => p.id === 'prod_SaPj0MHJuPVFGC');
   
   return (
     <motion.div

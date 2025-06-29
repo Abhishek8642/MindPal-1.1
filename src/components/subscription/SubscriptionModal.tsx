@@ -21,7 +21,7 @@ interface SubscriptionModalProps {
   selectedPlan?: string;
 }
 
-export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SaEOlOgANKu2QM' }: SubscriptionModalProps) {
+export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SaPj0MHJuPVFGC' }: SubscriptionModalProps) {
   const { createCheckoutSession, loading, isProUser } = useStripe();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
 
@@ -100,7 +100,7 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SaEOlO
             </p>
           </div>
 
-          {/* Stripe Configuration Warning */}
+          {/* Subscription Notice */}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6">
             <div className="flex items-start space-x-3">
               <AlertTriangle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
@@ -129,7 +129,7 @@ export function SubscriptionModal({ isOpen, onClose, selectedPlan = 'prod_SaEOlO
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                     <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium flex items-center space-x-1">
                       <Star className="h-3 w-3" />
-                      <span>Monthly Subscription</span>
+                      <span>Most Popular</span>
                     </div>
                   </div>
 
