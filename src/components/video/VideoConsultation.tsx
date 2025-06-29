@@ -70,50 +70,65 @@ export function VideoConsultation() {
     return replicaMap[personality] || replicaMap.supportive;
   };
 
-  useEffect(() => {
-    // Initialize local video stream
-    const initializeLocalVideo = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true
-        });
-        setLocalStream(stream);
-        setMediaPermissionError(null);
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch (error: any) {
-        console.error('Error accessing media devices:', error);
-        
-        // Handle different types of permission errors
-        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-          setMediaPermissionError('Camera and microphone access denied. Please allow permissions to use video consultation.');
-          setShowPermissionModal(true);
-        } else if (error.name === 'NotFoundError') {
-          setMediaPermissionError('No camera or microphone found. Please connect a camera and microphone to use video consultation.');
-          toast.error('No camera or microphone detected');
-        } else if (error.name === 'NotReadableError') {
-          setMediaPermissionError('Camera or microphone is already in use by another application.');
-          toast.error('Camera/microphone in use by another app');
-        } else {
-          setMediaPermissionError('Unable to access camera and microphone. Please check your device settings.');
-          toast.error('Unable to access camera/microphone');
-        }
-      }
-    };
+  // Initialize local video stream
+  const initializeLocalVideo = async () => {
+    // Don't initialize if session is active or stream already exists
+    if (isSessionActive || localStream) {
+      return;
+    }
 
-    if (!isSessionActive) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
+      setLocalStream(stream);
+      setMediaPermissionError(null);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error: any) {
+      console.error('Error accessing media devices:', error);
+      
+      // Handle different types of permission errors
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        setMediaPermissionError('Camera and microphone access denied. Please allow permissions to use video consultation.');
+        setShowPermissionModal(true);
+      } else if (error.name === 'NotFoundError') {
+        setMediaPermissionError('No camera or microphone found. Please connect a camera and microphone to use video consultation.');
+        toast.error('No camera or microphone detected');
+      } else if (error.name === 'NotReadableError') {
+        setMediaPermissionError('Camera or microphone is already in use by another application.');
+        toast.error('Camera/microphone in use by another app');
+      } else {
+        setMediaPermissionError('Unable to access camera and microphone. Please check your device settings.');
+        toast.error('Unable to access camera/microphone');
+      }
+    }
+  };
+
+  // Cleanup local stream
+  const cleanupLocalStream = () => {
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+      setLocalStream(null);
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    }
+  };
+
+  useEffect(() => {
+    // Only initialize when not in session and no existing stream
+    if (!isSessionActive && !localStream) {
       initializeLocalVideo();
     }
 
+    // Cleanup on unmount
     return () => {
-      // Cleanup local stream
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-      }
+      cleanupLocalStream();
     };
-  }, [isSessionActive, localStream]);
+  }, [isSessionActive]); // Remove localStream from dependencies to avoid infinite loop
 
   const handleStartSession = async () => {
     if (!isOnline) {
@@ -145,12 +160,17 @@ export function VideoConsultation() {
     }
 
     try {
+      // Clean up local stream before starting session
+      cleanupLocalStream();
+      
       const replicaId = getReplicaId(selectedPersonality);
       await startSession(replicaId, maxSessionTime);
       toast.success('Video consultation started!');
     } catch (error) {
       console.error('Failed to start session:', error);
       toast.error('Failed to start video session');
+      // Re-initialize local video if session failed to start
+      initializeLocalVideo();
     }
   };
 
@@ -158,6 +178,10 @@ export function VideoConsultation() {
     try {
       await endSession();
       toast.success('Video consultation ended');
+      // Re-initialize local video after session ends
+      setTimeout(() => {
+        initializeLocalVideo();
+      }, 1000); // Small delay to ensure session cleanup
     } catch (error) {
       console.error('Failed to end session:', error);
       toast.error('Failed to end session properly');
@@ -188,27 +212,33 @@ export function VideoConsultation() {
     setMediaPermissionError(null);
     setShowPermissionModal(false);
     
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
-      });
-      setLocalStream(stream);
-      setMediaPermissionError(null);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+    // Clean up existing stream first
+    cleanupLocalStream();
+    
+    // Wait a bit before retrying
+    setTimeout(async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
+        });
+        setLocalStream(stream);
+        setMediaPermissionError(null);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+        toast.success('Camera and microphone access granted!');
+      } catch (error: any) {
+        console.error('Error accessing media devices:', error);
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          setMediaPermissionError('Camera and microphone access denied. Please allow permissions to use video consultation.');
+          setShowPermissionModal(true);
+        } else {
+          setMediaPermissionError('Unable to access camera and microphone. Please check your device settings.');
+          toast.error('Unable to access camera/microphone');
+        }
       }
-      toast.success('Camera and microphone access granted!');
-    } catch (error: any) {
-      console.error('Error accessing media devices:', error);
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-        setMediaPermissionError('Camera and microphone access denied. Please allow permissions to use video consultation.');
-        setShowPermissionModal(true);
-      } else {
-        setMediaPermissionError('Unable to access camera and microphone. Please check your device settings.');
-        toast.error('Unable to access camera/microphone');
-      }
-    }
+    }, 500);
   };
 
   const personalities = [
