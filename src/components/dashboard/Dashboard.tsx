@@ -43,7 +43,7 @@ const FloatingElement = ({ children, delay }: { children: React.ReactNode; delay
 
 export function Dashboard() {
   const { user, handleSupabaseError } = useAuth();
-  const { isOnline, isConnectedToSupabase, withRetry } = useNetworkStatus();
+  const { isOnline, isConnectedToSupabase } = useNetworkStatus();
   const { isProUser } = useStripe();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -64,6 +64,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   const parallaxY = useTransform(scrollY, [0, 500], [0, -150]);
   const parallaxOpacity = useTransform(scrollY, [0, 300], [1, 0.3]);
@@ -83,7 +84,7 @@ export function Dashboard() {
   }, [searchParams]);
 
   const loadStats = useCallback(async () => {
-    if (!user) return;
+    if (!user || dataLoaded) return;
 
     if (!isConnectedToSupabase) {
       setLoading(false);
@@ -94,54 +95,63 @@ export function Dashboard() {
     try {
       setError(null);
       
-      const taskData = await withRetry(async () => {
-        const { data, error } = await supabase
-          .from('tasks')
-          .select('completed')
-          .eq('user_id', user.id);
+      // Load data sequentially to avoid overwhelming the connection
+      console.log('Loading dashboard stats...');
+      
+      // Load tasks data
+      const { data: taskData, error: taskError } = await supabase
+        .from('tasks')
+        .select('completed')
+        .eq('user_id', user.id)
+        .limit(100); // Limit to prevent large queries
 
-        if (error) {
-          const isJWTError = await handleSupabaseError(error);
-          if (!isJWTError) throw error;
-          return null;
+      if (taskError) {
+        const isJWTError = await handleSupabaseError(taskError);
+        if (!isJWTError) {
+          console.error('Task loading error:', taskError);
+          throw new Error('Failed to load tasks');
         }
+        return;
+      }
 
-        return data;
-      });
+      // Small delay to prevent request flooding
+      await new Promise(resolve => setTimeout(resolve, 100));
 
+      // Load mood data
       const today = new Date().toISOString().split('T')[0];
-      const moodData = await withRetry(async () => {
-        const { data, error } = await supabase
-          .from('mood_entries')
-          .select('mood')
-          .eq('user_id', user.id)
-          .gte('created_at', today)
-          .order('created_at', { ascending: false })
-          .limit(1);
+      const { data: moodData, error: moodError } = await supabase
+        .from('mood_entries')
+        .select('mood')
+        .eq('user_id', user.id)
+        .gte('created_at', today)
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-        if (error) {
-          const isJWTError = await handleSupabaseError(error);
-          if (!isJWTError) throw error;
-          return null;
+      if (moodError) {
+        const isJWTError = await handleSupabaseError(moodError);
+        if (!isJWTError) {
+          console.error('Mood loading error:', moodError);
+          // Don't throw, just log the error
         }
+      }
 
-        return data;
-      });
+      // Small delay to prevent request flooding
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      const voiceData = await withRetry(async () => {
-        const { data, error } = await supabase
-          .from('chat_sessions')
-          .select('id')
-          .eq('user_id', user.id);
+      // Load voice sessions data
+      const { data: voiceData, error: voiceError } = await supabase
+        .from('chat_sessions')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(50); // Limit to prevent large queries
 
-        if (error) {
-          const isJWTError = await handleSupabaseError(error);
-          if (!isJWTError) throw error;
-          return null;
+      if (voiceError) {
+        const isJWTError = await handleSupabaseError(voiceError);
+        if (!isJWTError) {
+          console.error('Voice sessions loading error:', voiceError);
+          // Don't throw, just log the error
         }
-
-        return data;
-      });
+      }
 
       setStats({
         totalTasks: taskData?.length || 0,
@@ -149,24 +159,28 @@ export function Dashboard() {
         todayMood: moodData?.[0]?.mood || null,
         voiceSessions: voiceData?.length || 0,
       });
+
+      setDataLoaded(true);
+      console.log('Dashboard stats loaded successfully');
     } catch (error) {
-      console.warn('Error loading stats:', error);
+      console.error('Error loading stats:', error);
       setError('Some data may not be up to date');
     } finally {
       setLoading(false);
     }
-  }, [user, handleSupabaseError, withRetry, isConnectedToSupabase]);
+  }, [user, handleSupabaseError, isConnectedToSupabase, dataLoaded]);
 
   useEffect(() => {
-    if (user) {
+    if (user && !dataLoaded) {
       loadStats();
       if (permission === 'default') {
         requestNotificationPermission().catch(console.warn);
       }
-    } else {
+    } else if (!user) {
       setLoading(false);
+      setDataLoaded(false);
     }
-  }, [user, loadStats, permission, requestNotificationPermission]);
+  }, [user, loadStats, permission, requestNotificationPermission, dataLoaded]);
 
   const handleQuickAction = async (action: string) => {
     try {
@@ -199,6 +213,7 @@ export function Dashboard() {
           break;
         case 'retry-connection':
           setLoading(true);
+          setDataLoaded(false);
           await loadStats();
           break;
         default:
@@ -690,7 +705,7 @@ export function Dashboard() {
           <SubscriptionModal
             isOpen={showSubscriptionModal}
             onClose={() => setShowSubscriptionModal(false)}
-            selectedPlan="prod_demo_mindpal_pro"
+            selectedPlan="prod_SaPj0MHJuPVFGC"
           />
         )}
       </AnimatePresence>
